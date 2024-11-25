@@ -17,6 +17,7 @@ bioRxiv 2023.08.27.555009; doi: https://doi.org/10.1101/2023.08.27.555009: This 
 **2.** Cell-type-specific firing patterns in a V1 cortical column model depend on feedforward and feedback-driven states. Giulia Moreni, Cyriel M. A. Pennartz, Jorge F. Mejias. bioRxiv 2024.10.24, doi: https://doi.org/10.1101/2024.04.02.587673. This paper takes the model and looks at specific effects of feedforward and feedback stimulation on the network activity. It is interesting to read if you want to know more about the role that specific neuronal populations have in the model and also to link it to visual stimulation. You can take inspiration from the experiments performed here and come up with new ideas.
 
 **Modelling Dendrites**
+
 **1.** Introducing the Dendrify framework for incorporating dendrites to spiking neural networks. M Pagkalos, S Chavlis, P Poirazi, DOI: https://doi.org/10.1038/s41467-022-35747-8. This paper introduces a very nice tool called Dendrify, which allows the implementation of simplified compartmental models to study dendritic contributions to dynamics. The tool itself can be found at: https://dendrify.readthedocs.io/en/latest/index.html. It has good tutorials and examples that you can start from. In general Poirazi's lab (senior authod in the Dendrify paper) is a very good starting point for anything to do with dendrites. Another lab you can check out for such topics is Claudia Clopath's lab at Imperial College London.
 
 **Useful links**
