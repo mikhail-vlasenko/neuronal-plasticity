@@ -16,9 +16,15 @@ bioRxiv 2023.08.27.555009; doi: https://doi.org/10.1101/2023.08.27.555009: This 
 
 **2.** Cell-type-specific firing patterns in a V1 cortical column model depend on feedforward and feedback-driven states. Giulia Moreni, Cyriel M. A. Pennartz, Jorge F. Mejias. bioRxiv 2024.10.24, doi: https://doi.org/10.1101/2024.04.02.587673. This paper takes the model and looks at specific effects of feedforward and feedback stimulation on the network activity. It is interesting to read if you want to know more about the role that specific neuronal populations have in the model and also to link it to visual stimulation. You can take inspiration from the experiments performed here and come up with new ideas.
 
+**3.** Billeh, Y. N. et al. Systematic Integration of Structural and Functional Data into Multi-scale Models of Mouse Primary Visual Cortex. Neuron 106, 388-403.e18 (2020). This is the original work from the Allen Brain Institute on which the cortical column model is based on.
+
+
 **Modelling Dendrites**
 
-**1.** Introducing the Dendrify framework for incorporating dendrites to spiking neural networks. M Pagkalos, S Chavlis, P Poirazi, DOI: https://doi.org/10.1038/s41467-022-35747-8. This paper introduces a very nice tool called Dendrify, which allows the implementation of simplified compartmental models to study dendritic contributions to dynamics. The tool itself can be found at: https://dendrify.readthedocs.io/en/latest/index.html. It has good tutorials and examples that you can start from. In general Poirazi's lab (senior authod in the Dendrify paper) is a very good starting point for anything to do with dendrites. Another lab you can check out for such topics is Claudia Clopath's lab at Imperial College London.
+**1.** Introducing the Dendrify framework for incorporating dendrites to spiking neural networks. M Pagkalos, S Chavlis, P Poirazi, DOI: https://doi.org/10.1038/s41467-022-35747-8. This paper introduces a very nice tool called Dendrify (built on top of Brian2), which allows the implementation of simplified compartmental models to study dendritic contributions to dynamics. The tool itself can be found at: https://dendrify.readthedocs.io/en/latest/index.html. It has good tutorials and examples that you can start from. In general Poirazi's lab (senior authod in the Dendrify paper) is a very good starting point for anything to do with dendrites. Another lab you can check out for such topics is Claudia Clopath's lab at Imperial College London.
+
+**Learning/Training networks**
+**1.** Nicola, W., Clopath, C. Supervised learning in spiking neural networks with FORCE training. Nat Commun 8, 2208 (2017). https://doi.org/10.1038/s41467-017-01827-3. Paper that describes a way to train recurrent neural networks to perform a specific task. Have not worked myself with such techniques, but this is something of interest in the field.
 
 **Useful links**
 - https://modeldb.science/: ModelDB is a very useful database which contains neuron models (both single neurons and populations) implemented in various languages and simulators, including Brian2. You might want to have a look in there before you implement something yourself (for inspiration or to re-use an already existing implementation, this can save lots of time).
