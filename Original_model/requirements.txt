@@ -1,0 +1,6 @@
+brian2
+matplotlib
+numpy
+pandas
+omegaconf
+hydra-core
