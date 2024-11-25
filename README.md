@@ -10,11 +10,13 @@ First of all, I would like to suggest that you each create a **private** Github 
 In parallel, it would be useful to start reading some literature on the topic. Here are some useful papers:
 
 **Literature**
+
 **1.**  Synaptic plasticity is required for oscillations in a V1 cortical column model with multiple interneuron types. Giulia Moreni, Cyriel M. A. Pennartz, Jorge F. Mejias.
 bioRxiv 2023.08.27.555009; doi: https://doi.org/10.1101/2023.08.27.555009: This paper describes the initial cortical column model as implemented by Giulia Moreni, who is a senior PhD in our lab. It gives a description of the parameters, equations and where the data to construct the model comes from. In addition, it has results from simulations in which spike-time dependent plasticity was added to the model, however, you can skip this section and only look at the introductory parts and methods to get a feel of the model. Important parts are the ones refering to spontaneous activity, from which you will start with the model.
 
 **2.** Cell-type-specific firing patterns in a V1 cortical column model depend on feedforward and feedback-driven states. Giulia Moreni, Cyriel M. A. Pennartz, Jorge F. Mejias. bioRxiv 2024.10.24, doi: https://doi.org/10.1101/2024.04.02.587673. This paper takes the model and looks at specific effects of feedforward and feedback stimulation on the network activity. It is interesting to read if you want to know more about the role that specific neuronal populations have in the model and also to link it to visual stimulation. You can take inspiration from the experiments performed here and come up with new ideas.
 
-
+**Useful links**
+- https://modeldb.science/: ModelDB is a very useful database which contains neuron models (both single neurons and populations) implemented in various languages and simulators, including Brian2. You might want to have a look in there before you implement something yourself (for inspiration or to re-use an already existing implementation, this can save lots of time).
 
 
