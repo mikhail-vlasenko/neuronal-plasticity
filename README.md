@@ -24,6 +24,7 @@ bioRxiv 2023.08.27.555009; doi: https://doi.org/10.1101/2023.08.27.555009: This 
 **1.** Introducing the Dendrify framework for incorporating dendrites to spiking neural networks. M Pagkalos, S Chavlis, P Poirazi, DOI: https://doi.org/10.1038/s41467-022-35747-8. This paper introduces a very nice tool called Dendrify (built on top of Brian2), which allows the implementation of simplified compartmental models to study dendritic contributions to dynamics. The tool itself can be found at: https://dendrify.readthedocs.io/en/latest/index.html. It has good tutorials and examples that you can start from. In general Poirazi's lab (senior authod in the Dendrify paper) is a very good starting point for anything to do with dendrites. Another lab you can check out for such topics is Claudia Clopath's lab at Imperial College London.
 
 **Learning/Training networks**
+
 **1.** Nicola, W., Clopath, C. Supervised learning in spiking neural networks with FORCE training. Nat Commun 8, 2208 (2017). https://doi.org/10.1038/s41467-017-01827-3. Paper that describes a way to train recurrent neural networks to perform a specific task. Have not worked myself with such techniques, but this is something of interest in the field.
 
 **Useful links**
