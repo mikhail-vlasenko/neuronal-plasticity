@@ -27,6 +27,10 @@ bioRxiv 2023.08.27.555009; doi: https://doi.org/10.1101/2023.08.27.555009: This 
 
 **1.** Nicola, W., Clopath, C. Supervised learning in spiking neural networks with FORCE training. Nat Commun 8, 2208 (2017). https://doi.org/10.1038/s41467-017-01827-3. Paper that describes a way to train recurrent neural networks to perform a specific task. Have not worked myself with such techniques, but this is something of interest in the field.
 
+**Disinhibitory Circuits**
+
+**1.** A dendritic disinhibitory circuit mechanism for pathway-specific gating. Guangyu Robert Yang, John D. Murray & Xiao-Jing Wang, https://www.nature.com/articles/ncomms12815: 
+
 **Useful links**
 - https://modeldb.science/: ModelDB is a very useful database which contains neuron models (both single neurons and populations) implemented in various languages and simulators, including Brian2. You might want to have a look in there before you implement something yourself (for inspiration or to re-use an already existing implementation, this can save lots of time).
 - https://neuronaldynamics.epfl.ch/online/index.html: Online version of a great book on neuronal dynamics by W. Gerstner if you'd like to dive deeper into the theory or gather ideas (it is quite mathematical, although it is very useful to learn some basic concepts).
