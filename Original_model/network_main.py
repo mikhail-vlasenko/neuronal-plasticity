@@ -191,7 +191,7 @@ class Network_main:
                 if neuron_type == 'INH':
                     S = Synapses(source_pop, target_pop, model=self.eqs_dict[eq_1], on_pre='s_gaba += 1', method='euler')
                     if m == n:
-                        S.connect(condition='i != j', p=0) # Prevent auto-synapses
+                        S.connect(condition='i != j', p=self.net_dict['connect_probs'][n][m]) # Prevent auto-synapses
                     else:
                         S.connect(p=self.net_dict['connect_probs'][n][m])
                     if self.net_dict['connect_probs'][n][m] == 0 or self.net_dict['synaptic_strength'][n][m] == 0: # Condition to prevent division by 0 when calculating weight
