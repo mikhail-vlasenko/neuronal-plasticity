@@ -113,6 +113,8 @@ gs = fig.add_gridspec(5, 1, height_ratios=[1, 1, 1, 1, 1])
 ax1 = fig.add_subplot(gs[0])
 sns.scatterplot(x=np.array(neurons_times), y=np.array(neurons_indices),
                 color='blue', s=100, label='Neuron spikes', ax=ax1)
+sns.scatterplot(x=np.array(input_times), y=np.array(input_indices),
+                color='green', s=100, marker='x', linewidth=3, label='Input', ax=ax1)
 sns.scatterplot(x=np.array(dopamine_times), y=np.array(dopamine_indices) + 2,
                 color='red', s=100, label='Reward', ax=ax1)
 ax1.set_xlim([0, simulation_duration/second])
@@ -120,6 +122,7 @@ ax1.set_ylim([-0.5, 3])
 ax1.set_yticks([0, 1, 2])
 ax1.set_yticklabels(['Pre-neuron', 'Post-neuron', 'Reward'])
 ax1.set_xticks([])
+ax1.legend(loc='upper left')
 
 # Plot 2: Extracellular dopamine
 ax2 = fig.add_subplot(gs[1])
