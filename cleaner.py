@@ -53,6 +53,9 @@ def clean_markdown(input_file, output_file):
     # Fix any duplicate newlines
     cleaned_content = re.sub(r'\n{3,}', '\n\n', cleaned_content)
 
+    # Remove 
+    cleaned_content = re.sub(r'', '', cleaned_content)
+
     # Save the cleaned content
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(cleaned_content)
@@ -68,6 +71,6 @@ def clean_markdown(input_file, output_file):
 
 
 if __name__ == "__main__":
-    input_file = "brian2_documentation_no_paper_examples.md"
+    input_file = "brian2_documentation_for_claude.md"
     output_file = "brian2_documentation_for_claude.md"
     clean_markdown(input_file, output_file)
