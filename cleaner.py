@@ -56,6 +56,20 @@ def clean_markdown(input_file, output_file):
     # Remove 
     cleaned_content = re.sub(r'', '', cleaned_content)
 
+    # # Pattern to match indented code blocks with surrounding empty lines
+    # pattern = r'(\n\n+)((?:[ \t]+[^\n]*\n)+)(\n\n+)'
+    #
+    # def normalize_empty_lines(match):
+    #     code_block = match.group(3)
+    #     # Normalize to exactly one empty line before and after
+    #     return f"\n\n{code_block}\n"
+    #
+    # # this one takes a while
+    # cleaned_content = re.sub(pattern, normalize_empty_lines, cleaned_content, flags=re.DOTALL)
+
+    pattern = re.compile(r'\n[ \t]*\n[ \t]*\n')
+    cleaned_content = pattern.sub(r'\n\n', cleaned_content)
+
     # Save the cleaned content
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(cleaned_content)

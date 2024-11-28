@@ -31,20 +31,15 @@ The default functions available in Brian are stored in the `DEFAULT_FUNCTIONS` d
 To add a new implementation for a code generation target, a `FunctionImplementation` can be added to the [`Function.implementations`](../reference/brian2.core.functions.Function.html#brian2.core.functions.Function.implementations "brian2.core.functions.Function.implementations") dictionary. The key for this dictionary has to be either a `CodeGenerator` class object, or a `CodeObject` class object. The `CodeGenerator` of a `CodeObject` (e.g. `CPPCodeGenerator` for `CPPStandaloneCodeObject`) is used as a fallback if no implementation specific to the `CodeObject` class exists.
 
 If a function is already provided for the target language (e.g. it is part of a library imported by default), using the same name, all that is needed is to add an empty `FunctionImplementation` object to mark the function as implemented. For example, `exp` is a standard function in C++:
-    
-    
+
     DEFAULT_FUNCTIONS['exp'].implementations[CPPCodeGenerator] = FunctionImplementation()
-    
 
 Some functions are implemented but have a different name in the target language. In this case, the `FunctionImplementation` object only has to specify the new name:
-    
-    
+
     DEFAULT_FUNCTIONS['arcsin'].implementations[CPPCodeGenerator] = FunctionImplementation('asin')
-    
 
 Finally, the function might not exist in the target language at all, in this case the code for the function has to be provided, the exact form of this code is language-specific. In the case of C++, it’s a dictionary of code blocks:
-    
-    
+
     clip_code = {'support_code': '''
             double _clip(const float value, const float a_min, const float a_max)
             {
@@ -57,7 +52,6 @@ Finally, the function might not exist in the target language at all, in this cas
             '''}
     DEFAULT_FUNCTIONS['clip'].implementations[CPPCodeGenerator] = FunctionImplementation('_clip',
                                                                                     code=clip_code)
-    
 
 ---
 
@@ -98,7 +92,6 @@ This section has additional information on details not covered in the [User’s 
     * [Syntax layer](how_brian_works.html#syntax-layer)
     * [Computational engine](how_brian_works.html#computational-engine)
   * [Interfacing with external code](interface.html)
-
 
 ---
 
@@ -142,7 +135,6 @@ np.arange(2) * mV | array([ 0. , 0.001]) | array([ 0., 1.]) * mvolt
 (np.arange(2) * mV) >= 1 * mV | array([False, True], dtype=bool) | array([False, True], dtype=bool)  
 (np.arange(2) * mV)[0] >= 1 * mV | False | False  
 (np.arange(2) * mV)[1] >= 1 * mV | DimensionMismatchError | True  
-  
 
 ---
 
@@ -185,22 +177,18 @@ Languages typically define a `common_group` template that is the base for all ot
 Templates also specify additional information necessary for the code generation process as Jinja comments (`{# ... #}`). The following keywords are recognized by Brian:
 
 `USES_VARIABLES`
-    
 
 Lists variable names that are used by the template, even if they are not referred to in user code.
 
 `WRITES_TO_READ_ONLY_VARIABLES`
-    
 
 Lists read-only variables that are modified by the template. Normally, read-only variables are not considered to change during code execution, but e.g. synapse creation requires changes to synaptic indices that are considered read-only otherwise.
 
 `ALLOWS_SCALAR_WRITE`
-    
 
 The presence of this keyword means that in this template, writing to scalar variables is permitted. Writing to scalar variables is not permitted by default, because it can be ambiguous in contexts that do not involve all neurons/synapses. For example, should the statement `scalar_variable += 1` in a reset statement update the variable once or once for every spiking neuron?
 
 `ITERATE_ALL`
-    
 
 Lists indices that are iterated over completely. For example, during the state update or threshold step, the template iterates over all neurons with the standard index `_idx`. When executing the reset statements on the other hand, not all neurons are concerned. This is only used for the numpy code generation target, where it allows avoiding expensive unnecessary indexing.
 
@@ -322,25 +310,20 @@ Source: https://brian2.readthedocs.io/en/stable/user/computation.html
 Brian has several different methods for running the computations in a simulation. The default mode is Runtime code generation, which runs the simulation loop in Python but compiles and executes the modules doing the actual simulation work (numerical integration, synaptic propagation, etc.) in a defined target language. Brian will select the best available target language automatically. On Windows, to ensure that you get the advantages of compiled code, read the instructions on installing a suitable compiler in [Requirements for C++ code generation](../introduction/install.html#installation-cpp). Runtime mode has the advantage that you can combine the computations performed by Brian with arbitrary Python code specified as [`NetworkOperation`](../reference/brian2.core.operations.NetworkOperation.html#brian2.core.operations.NetworkOperation "brian2.core.operations.NetworkOperation").
 
 The fact that the simulation is run in Python means that there is a (potentially big) overhead for each simulated time step. An alternative is to run Brian in with Standalone code generation – this is in general faster (for certain types of simulations _much_ faster) but cannot be used for all kinds of simulations. To enable this mode, add the following line after your Brian import, but before your simulation code:
-    
-    
+
     set_device('cpp_standalone')
-    
 
 For detailed control over the compilation process (both for runtime and standalone code generation), you can change the Cleaning up after a run that are used.
 
 The following topics are not essential for beginners.
 
-  
 
 ## Runtime code generation
 
 Code generation means that Brian takes the Python code and strings in your model and generates code in one of several possible different languages which is then executed. The target language for this code generation process is set in the [codegen.target](../reference/brian2.codegen.html#brian-pref-codegen-target) preference. By default, this preference is set to `'auto'`, meaning that it will choose the compiled language target if possible and fall back to Python otherwise (also raising a warning). The compiled language target is `'cython'` which needs the [Cython](http://cython.org/) package in addition to a working C++ compiler. If you want to chose a code generation target explicitly (e.g. because you want to get rid of the warning that only the Python fallback is available), set the preference to `'numpy'` or `'cython'` at the beginning of your script:
-    
-    
+
     from brian2 import *
     prefs.codegen.target = 'numpy'  # use the Python fallback
-    
 
 See [Preferences](../advanced/preferences.html) for different ways of setting preferences.
 
@@ -361,30 +344,22 @@ To use the C++ standalone mode, you only have to make very small changes to your
 ### Single run call
 
 At the beginning of the script, i.e. after the import statements, add:
-    
-    
+
     set_device('cpp_standalone')
-    
 
 The `Device.build` function will be automatically called with default arguments right after the [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run") call. If you need non-standard arguments then you can specify them as part of the [`set_device()`](../reference/brian2.devices.device.set_device.html#brian2.devices.device.set_device "brian2.devices.device.set_device") call:
-    
-    
+
     set_device('cpp_standalone', directory='my_directory', debug=True)
-    
 
 ### Multiple run calls
 
 At the beginning of the script, i.e. after the import statements, add:
-    
-    
+
     set_device('cpp_standalone', build_on_run=False)
-    
 
 After the last [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run") call, call `CPPStandaloneDevice.build` explicitly:
-    
-    
+
     device.build()
-    
 
 The `build` function has several arguments to specify the output directory, whether or not to compile and run the project after creating it and whether or not to compile it with debugging support or not.
 
@@ -395,8 +370,7 @@ To run multiple full, independent, simulations (i.e. not just multiple [`run()`]
 #### Running multiple simulations with same parameters
 
 By default, a device’s [`run`](../reference/brian2.devices.cpp_standalone.device.CPPStandaloneDevice.html#brian2.devices.cpp_standalone.device.CPPStandaloneDevice.run "brian2.devices.cpp_standalone.device.CPPStandaloneDevice.run") will run the simulation again, using the same model parameters and initializations. This can be useful, when the model is itself stochastic (e.g. using the `xi` noise term in the equations, using a stochastic group such as [`PoissonGroup`](../reference/brian2.input.poissongroup.PoissonGroup.html#brian2.input.poissongroup.PoissonGroup "brian2.input.poissongroup.PoissonGroup") or [`PoissonInput`](../reference/brian2.input.poissoninput.PoissonInput.html#brian2.input.poissoninput.PoissonInput "brian2.input.poissoninput.PoissonInput"), etc.), when it uses random synaptic connections, or when it uses random variable initialization:
-    
-    
+
     set_device('cpp_standalone')
     group = NeuronGroup(1, 'dv/dt = -v / (10*ms) : 1')  # a simple IF neuron without threshold
     group.v = 'rand()'  # v is randomly initialized between 0 and 1
@@ -407,11 +381,9 @@ By default, a device’s [`run`](../reference/brian2.devices.cpp_standalone.devi
     for _ in range(9):
         device.run()
         results.append(mon.v[0])
-    
 
 For more consistent code, you might consider to disable the automatic `device.build`/`device.run` call, so that the initial run of the simulation is not different to subsequent runs:
-    
-    
+
     set_device('cpp_standalone', build_on_run=False)
     # ... Set up model as before
     run(100*ms)  # will not call device.build/device.run
@@ -421,13 +393,11 @@ For more consistent code, you might consider to disable the automatic `device.bu
     for _ in range(10):
         device.run()
         results.append(mon.v[0])
-    
 
 #### Running multiple simulations with different parameters
 
 When launching new simulation runs as described above, you can also change parameters of the model. Note that this only concerns parameters that are included in equations, you cannot change externally defined constants. You can easily work around this limitation, however, by declaring such constants in the equations, using the `(shared, constant)` flags. Here’s a similar example to the one shown before, now exploring the effect of the time constant `tau`, while assuring via a [`seed()`](../reference/brian2.devices.device.seed.html#brian2.devices.device.seed "brian2.devices.device.seed") call that the random initializations are identical across runs:
-    
-    
+
     set_device('cpp_standalone', build_on_run=False)
     seed(111)  # same random numbers for each run
     group = NeuronGroup(10, '''dv/dt = -v / tau : 1
@@ -441,11 +411,9 @@ When launching new simulation runs as described above, you can also change param
     for tau_value in (np.arange(10)+1)*5*ms:
         device.run(run_args={group.tau: tau_value})
         results.append(mon.v[:])
-    
 
 You can use the same mechanism to provide an array of initial values for a group. E.g., to systematically try out different initializations of `v`, you could use:
-    
-    
+
     set_device('cpp_standalone', build_on_run=False)
     group = NeuronGroup(10, 'dv/dt = -v / (10*ms) : 1')  # ten simple IF neurons without threshold
     mon = StateMonitor(group, 'v', record=True)
@@ -456,11 +424,9 @@ You can use the same mechanism to provide an array of initial values for a group
     for idx in range(10):
         device.run(run_args={group.v: np.arange(10)*0.01 + 0.1*idx})
         results.append(mon.v[0])
-    
 
 You can also overwrite the values in a [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray") using this mechanism, by using the [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray") as a key in the `run_args` dictionary:
-    
-    
+
     set_device('cpp_standalone', build_on_run=False)
     stim = TimedArray(np.zeros(10), dt=10*ms)
     group = NeuronGroup(10, 'dv/dt = (stim(t) - v)/ (10*ms) : 1')  # time-dependent stimulus
@@ -474,30 +440,24 @@ You can also overwrite the values in a [`TimedArray`](../reference/brian2.input.
         values[np.random.randint(0, 10)] = 1
         device.run(run_args={stim: values})
         results.append(mon.v[0])
-    
 
 By default, the initialization provided via `run_args` overwrites any initializations done in the usual way. This might not exactly do what you want if you use string-based variable initializations that refer to each other. For example, if your equations contain two synaptic time constants `tau_exc` and `tau_inh`, and you always want the latter to be twice the value of the former, you can write:
-    
-    
+
     group.tau_exc = 5*ms
     group.tau_inh = 'tau_exc * 2'
-    
 
 If you now use the `run_args` argument to set `tau_exc` to a different value, this will not be taken into account for setting `tau_inh`, since the value change for `tau_exc` happens _after_ the initialization of `tau_inh`. Of course you can simply set the value for `tau_inh` manually using `run_args` as well, but a more general solution is to move the point where the `run_args` are applied. You can do this by calling the device’s [`apply_run_args`](../reference/brian2.devices.cpp_standalone.device.CPPStandaloneDevice.html#brian2.devices.cpp_standalone.device.CPPStandaloneDevice.apply_run_args "brian2.devices.cpp_standalone.device.CPPStandaloneDevice.apply_run_args") function:
-    
-    
+
     group.tau_exc = 5*ms
     device.apply_run_args()
     group.tau_inh = 'tau_exc * 2'
-    
 
 With this change, setting `tau_exc` via `run_args` will affect the value of `tau_inh`.
 
 #### Running multiple simulations in parallel
 
 The techniques mentioned above cannot be directly used to run simulations in parallel (e.g. with Python’s [`multiprocessing`](https://docs.python.org/3/library/multiprocessing.html#module-multiprocessing "\(in Python v3.12\)") module), since all of them will try to write the results to the same place. You can circumvent this problem by specifying the `results_directory` argument, and setting it to a different value for each run. Note that using the standalone device with [`multiprocessing`](https://docs.python.org/3/library/multiprocessing.html#module-multiprocessing "\(in Python v3.12\)") can be a bit tricky, since the currently selected device is stored globally in the `device` module. Use the approach presented below to make sure the device is selected correctly. Here’s a variant of the previously shown example running a simulation with random initialization repeatedly, this time running everything in parallel using Python’s [`multiprocessing`](https://docs.python.org/3/library/multiprocessing.html#module-multiprocessing "\(in Python v3.12\)") module:
-    
-    
+
     class SimWrapper:
         def __init__(self):
             # Runs once to set up the simulation
@@ -526,11 +486,9 @@ The techniques mentioned above cannot be directly used to run simulations in par
         with multiprocessing.Pool() as p:
             # Run 10 simulations in parallel
             results = p.map(sim.do_run, [f'result_{idx}' for idx in range(10)])
-    
 
 You can also use parallel runs with the `run_args` argument. For example, to do 10 simulations with different (deterministic) initial values for `v`:
-    
-    
+
     class SimWrapper:
         # ... model definition without random initialization
     
@@ -549,7 +507,6 @@ You can also use parallel runs with the `run_args` argument. For example, to do 
         with multiprocessing.Pool() as p:
             # Run 10 simulations in parallel
             results = p.map(sim.do_run, np.linspace(0, 1, 10))
-    
 
 Note
 
@@ -558,68 +515,55 @@ Python’s [`multiprocessing`](https://docs.python.org/3/library/multiprocessing
 ### Limitations
 
 Not all features of Brian will work with C++ standalone, in particular Python based network operations and some array based syntax such as `S.w[0, :] = ...` will not work. If possible, rewrite these using string based syntax and they should work. Also note that since the Python code actually runs as normal, code that does something like this may not behave as you would like:
-    
-    
+
     results = []
     for val in vals:
         # set up a network
         run()
         results.append(result)
-    
 
 The current C++ standalone code generation only works for a fixed number of `run` statements, not with loops. If you need to do loops or other features not supported automatically, you can do so by inspecting the generated C++ source code and modifying it, or by inserting code directly into the main loop as described below.
 
 ### Variables
 
 In standalone mode, code will only be executed when the simulation is run (after the [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run") call by default, or after a call to `build`, if [`set_device()`](../reference/brian2.devices.device.set_device.html#brian2.devices.device.set_device "brian2.devices.device.set_device") has been called with `build_on_run` set to `False`). This means that it is not possible to access state variables and synaptic connection indices in the Python script doing the set up of the model. For example, the following code would work fine in runtime mode, but raise a `NotImplementedError` in standalone mode:
-    
-    
+
     neuron = NeuronGroup(10, 'v : volt')
     neuron.v = '-70*mV + rand()*10*mV'
     print(np.mean(neuron.v))
-    
 
 Sometimes, access is needed to make one variable depend on another variable for initialization. In such cases, it is often possible to circumvent the issue by using initialization with string expressions for both variables. For example, to set the initial membrane potential relative to a random leak reversal potential, the following code would work in runtime mode but fail in standalone mode:
-    
-    
+
     neuron = NeuronGroup(10, 'dv/dt = -g_L*(v - E_L)/tau : volt')
     neuron.E_L = '-70*mV + rand()*10*mV'  # E_L between -70mV and -60mV
     neuron.v = neuron.E_L  # initial membrane potential equal to E_L
-    
 
 Instead, you can initialize the variable `v` with a string expression, which means that standalone will execute it during the run when the value of `E_L` is available:
-    
-    
+
     neuron = NeuronGroup(10, 'dv/dt = -g_L*(v - E_L)/tau : volt')
     neuron.E_L = '-70*mV + rand()*10*mV'  # E_L between -70mV and -60mV
     neuron.v = 'E_L'  # works both in runtime and standalone mode
-    
 
 The same applies to synaptic indices. For example, if we want to set weights differently depending on the target index of a synapse, the following would work in runtime mode but fail in standalone mode, since the synaptic indices have not been determined yet:
-    
-    
+
     neurons = NeuronGroup(10, '')
     synapses = Synapses(neurons, neurons, 'w : 1')
     synapses.connect(p=0.25)
     # Set weights to low values when targetting first five neurons and to high values otherwise
     synapses.w[:, :5] = 0.1
     synapses.w[:, 5:] = 0.9
-    
 
 Again, this initialization can be replaced by string expressions, so that standalone mode can evaluate them in the generated code after synapse creation:
-    
-    
+
     neurons = NeuronGroup(10, '')
     synapses = Synapses(neurons, neurons, 'w : 1')
     synapses.connect(p=0.25)
     # Set weights to low values when targetting first five neurons and to high values otherwise
     synapses.w['j < 5'] = 0.1
     synapses.w['j >= 5'] = 0.9
-    
 
 Note that this limitation only applies if the variables or synapses have been initialized in ways that require the execution of code. If instead they are initialized with concrete values, they can be accessed in Python code even in standalone mode:
-    
-    
+
     neurons = NeuronGroup(10, 'v : volt')
     neurons.v = -70*mV
     print(np.mean(neurons.v))  # works in standalone
@@ -628,7 +572,6 @@ Note that this limitation only applies if the variables or synapses have been in
     # works as well, since synaptic indices are known
     synapses.w[:, :5] = 0.1
     synapses.w[:, 5:] = 0.9
-    
 
 In any case, state variables, synaptic indices, and monitored variables can be accessed using standard syntax _after_ a run (with a few exceptions, e.g. string expressions for indexing).
 
@@ -639,32 +582,25 @@ Warning
 OpenMP code has not yet been well tested and so may be inaccurate.
 
 When using the C++ standalone mode, you have the opportunity to turn on multi-threading, if your C++ compiler is compatible with OpenMP. By default, this option is turned off and only one thread is used. However, by changing the preferences of the codegen.cpp_standalone object, you can turn it on. To do so, just add the following line in your python script:
-    
-    
+
     prefs.devices.cpp_standalone.openmp_threads = XX
-    
 
 XX should be a positive value representing the number of threads that will be used during the simulation. Note that the speedup will strongly depend on the network, so there is no guarantee that the speedup will be linear as a function of the number of threads. However, this is working fine for networks with not too small timestep (dt > 0.1ms), and results do not depend on the number of threads used in the simulation.
 
 ### Custom code injection
 
 It is possible to insert custom code directly into the generated code of a standalone simulation using a Device’s [`insert_code`](../reference/brian2.devices.device.Device.html#brian2.devices.device.Device.insert_code "brian2.devices.device.Device.insert_code") method:
-    
-    
+
     device.insert_code(slot, code)
-    
 
 `slot` can be one of `main`, `before_start`, `after_start`, `before_network_run`, `after_network_run`, `before_end` and `after_end`, which determines where the code is inserted. `code` is the code in the Device’s language. Here is an example for the C++ Standalone Device:
-    
-    
+
     device.insert_code('main', '''
     cout << "Testing direct insertion of code." << endl;
     ''')
-    
 
 For the C++ Standalone Device, all code is inserted into the `main.cpp` file, here into the `main` slot, referring to the main simulation function. This is a simplified version of this function in `main.cpp`:
-    
-    
+
     int main(int argc, char **argv)
     {
         // before_start
@@ -679,7 +615,6 @@ For the C++ Standalone Device, all code is inserted into the `main.cpp` file, he
     
         return 0;
     }
-    
 
 `{{main_lines}}` is replaced in the generated code with the actual simulation. Code inserted into the `main` slot will be placed within the `{{main_lines}}`. `brian_start` allocates and initializes all arrays needed during the simulation and `brian_end` writes the results to disc and deallocates memory. Within the `{{main_lines}}`, all `Network` objects defined in Python are created and run. Code inserted in the `before/after_network_run` slot will be inserted around the `Network.run` call, which starts the time loop. Note that if your Python script has multiple `Network` objects or multiple `run` calls, code in the `before/after_network_run` slot will be inserted around each `Network.run` call in the generated code.
 
@@ -688,32 +623,24 @@ The code injection mechanism has been used for benchmarking experiments, see e.g
 ### Customizing the build process
 
 In standalone mode, a standard “make file” is used to orchestrate the compilation and linking. To provide additional arguments to the `make` command (respectively `nmake` on Windows), you can use the [devices.cpp_standalone.extra_make_args_unix](../advanced/preferences.html#brian-pref-devices-cpp-standalone-extra-make-args-unix) or [devices.cpp_standalone.extra_make_args_windows](../advanced/preferences.html#brian-pref-devices-cpp-standalone-extra-make-args-windows) preference. On Linux, this preference is by default set to `['-j']` to enable parallel compilation. Note that you can also use these arguments to overwrite variables in the make file, e.g. to use [clang](https://clang.llvm.org/) instead of the default [gcc](https://gcc.gnu.org/) compiler:
-    
-    
+
     prefs.devices.cpp_standalone.extra_make_args_unix += ['CC=clang++']
-    
 
 ### Cleaning up after a run
 
 Standalone simulations store all results of a simulation (final state variable values and values stored in monitors) to disk. These results can take up quite significant amount of space, and you might therefore want to delete these results when you do not need them anymore. You can do this by using the device’s [`delete`](../reference/brian2.devices.device.Device.html#brian2.devices.device.Device.delete "brian2.devices.device.Device.delete") method:
-    
-    
+
     device.delete()
-    
 
 Be aware that deleting the data will make all access to state variables fail, including the access to values in monitors. You should therefore only delete the data after doing all analysis/plotting that you are interested in.
 
 By default, this function will delete both the generated code and the data, i.e. the full project directory. If you want to keep the code (which typically takes up little space compared to the results), exclude it from the deletion:
-    
-    
+
     device.delete(code=False)
-    
 
 If you added any additional files to the project directory manually, these will not be deleted by default. To delete the full directory regardless of its content, use the `force` option:
-    
-    
+
     device.delete(force=True)
-    
 
 Note
 
@@ -744,8 +671,7 @@ An example PSP is the \\(\alpha\\)-function \\(\mathrm{PSP}(t)=(t/\tau)e^{-t/\ta
 \\[\begin{split}\tau \frac{\mathrm{d}V}{\mathrm{d}t} & = V_\mathrm{rest}-V+g \\\ \tau \frac{\mathrm{d}g}{\mathrm{d}t} &= -g \\\ g &\leftarrow g+w_i\;\;\;\mbox{upon spike from synapse $i$}\end{split}\\]
 
 This could then be written in Brian as:
-    
-    
+
     eqs = '''
     dV/dt = (V_rest-V+g)/tau : 1
     dg/dt = -g/tau : 1
@@ -753,7 +679,6 @@ This could then be written in Brian as:
     G = NeuronGroup(N, eqs, ...)
     ...
     S = Synapses(G, G, 'w : 1', on_pre='g += w')
-    
 
 To see that these two formulations are the same, you first solve the problem for the case of a single synapse and a single spike at time 0. The initial conditions at \\(t=0\\) will be \\(V(0)=V_\mathrm{rest}\\), \\(g(0)=w\\).
 
@@ -764,35 +689,29 @@ Now we use the linearity of these differential equations to see that it also wor
 In general, to convert from integrated form to ODE form, see [Köhn and Wörgötter (1998)](http://www.mitpressjournals.org/doi/abs/10.1162/089976698300017061), [Sánchez-Montañás (2001)](https://link.springer.com/chapter/10.1007/3-540-45720-8_14), and [Jahnke et al. (1999)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.20.2284&rep=rep1&type=pdf). However, for some simple and widely used types of synapses, use the list below. In this list, we assume synapses are postsynaptic potentials, but you can replace \\(V(t)\\) with a current or conductance for postsynaptic currents or conductances. In each case, we give the Brian code with unitless variables, where `eqs` is the differential equations for the target [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"), and `on_pre` is the argument to [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses").
 
 **Exponential synapse** \\(V(t)=e^{-t/\tau}\\):
-    
-    
+
     eqs = '''
     dV/dt = -V/tau : 1
     '''
     on_pre = 'V += w'
-    
 
 **Alpha synapse** \\(V(t)=(t/\tau)e^{-t/\tau}\\):
-    
-    
+
     eqs = '''
     dV/dt = (x-V)/tau : 1
     dx/dt = -x/tau    : 1
     '''
     on_pre = 'x += w'
-    
 
 \\(V(t)\\) reaches a maximum value of \\(w/e\\) at time \\(t=\tau\\).
 
 **Biexponential synapse** \\(V(t)=\frac{\tau_2}{\tau_2-\tau_1}\left(e^{-t/\tau_1}-e^{-t/\tau_2}\right)\\):
-    
-    
+
     eqs = '''
     dV/dt = ((tau_2 / tau_1) ** (tau_1 / (tau_2 - tau_1))*x-V)/tau_1 : 1
     dx/dt = -x/tau_2                                                 : 1
     '''
     on_pre = 'x += w'
-    
 
 \\(V(t)\\) reaches a maximum value of \\(w\\) at time \\(t=\frac{\tau_1\tau_2}{\tau_2-\tau_1}\log\left(\frac{\tau_2}{\tau_1}\right)\\).
 
@@ -829,62 +748,48 @@ Finally, the fourth type of event in the example is named `evt_run`, and this ca
 ### Defining an event
 
 This can be done with the `events` keyword in the [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") initializer:
-    
-    
+
     group = NeuronGroup(N, '...', threshold='...', reset='...',
                         events={'custom_event': 'x > x_th'})
-    
 
 In this example, we define an event with the name `custom_event` that is triggered when the `x` variable crosses the threshold `x_th`. Note that you can define any number of custom events. Each event is defined by its name as the key, and its condition as the value of the dictionary.
 
 ### Recording events
 
 Custom events can be recorded with an [`EventMonitor`](../reference/brian2.monitors.spikemonitor.EventMonitor.html#brian2.monitors.spikemonitor.EventMonitor "brian2.monitors.spikemonitor.EventMonitor"):
-    
-    
+
     event_mon = EventMonitor(group, 'custom_event')
-    
 
 Such an [`EventMonitor`](../reference/brian2.monitors.spikemonitor.EventMonitor.html#brian2.monitors.spikemonitor.EventMonitor "brian2.monitors.spikemonitor.EventMonitor") can be used in the same way as a [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor") – in fact, creating the [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor") is basically identical to recording the `spike` event with an [`EventMonitor`](../reference/brian2.monitors.spikemonitor.EventMonitor.html#brian2.monitors.spikemonitor.EventMonitor "brian2.monitors.spikemonitor.EventMonitor"). An [`EventMonitor`](../reference/brian2.monitors.spikemonitor.EventMonitor.html#brian2.monitors.spikemonitor.EventMonitor "brian2.monitors.spikemonitor.EventMonitor") is not limited to record the event time/neuron index, it can also record other variables of the model at the time of the event:
-    
-    
+
     event_mon = EventMonitor(group, 'custom_event', variables['var1', 'var2'])
-    
 
 ### Triggering [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") code
 
 If the event should trigger a series of statements (i.e. the equivalent of `reset` statements), this can be added by calling `run_on_event`:
-    
-    
+
     group.run_on_event('custom_event', 'x=0')
-    
 
 ### Triggering synaptic pathways
 
 When neurons are connected by [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses"), the `pre` and `post` pathways are triggered by `spike` events on the presynaptic and postsynaptic [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") by default. It is possible to change which pathway is triggered by which event by providing an `on_event` keyword that either specifies which event to use for all pathways, or a specific event for each pathway (where non-specified pathways use the default `spike` event):
-    
-    
+
     synapse_1 = Synapses(group, another_group, '...', on_pre='...', on_event='custom_event')
-    
 
 The code above causes all pathways to be triggered by an event named `custom_event` instead of the default `spike`.
-    
-    
+
     synapse_2 = Synapses(group, another_group, '...', on_pre='...', on_post='...',
                          on_event={'pre': 'custom_event'})
-    
 
 In the code above, only the `pre` pathway is triggered by the `custom_event` event.
 
 We can also create new pathways and have them be triggered by custom events. For example:
-    
-    
+
     synapse_3 = Synapses(group, another_group, '...',
                          on_pre={'pre': '....',
                                  'custom_pathway': '...'},
                          on_event={'pre': 'spike',
                                    'custom_pathway': 'custom_event'})
-    
 
 In this code, the default `pre` pathway is still triggered by the `spike` event, but there is a new pathway called `custom_pathway` that is triggered by the `custom_event` event.
 
@@ -915,30 +820,25 @@ For custom progress reporting (e.g. graphical output, writing to a file, etc.), 
 The function will be called every `report_period` during the simulation, but also at the beginning and end with `completed` equal to 0.0 and 1.0, respectively.
 
 For the C++ standalone mode, the same standard options are available. It is also possible to implement custom progress reporting by directly passing the code (as a multi-line string) to the `report` argument. This code will be filled into a progress report function template, it should therefore only contain a function body. The simplest use of this might look like:
-    
-    
+
     net.run(duration, report='std::cout << (int)(completed*100.) << "% completed" << std::endl;')
-    
 
 ### Examples of custom reporting
 
 **Progress printed to a file**
-    
-    
+
     from brian2.core.network import TextReport
     report_file = open('report.txt', 'w')
     file_reporter = TextReport(report_file)
     net.run(duration, report=file_reporter)
     report_file.close()
-    
 
 **“Graphical” output on the console**
 
 This needs a “normal” Linux console, i.e. it might not work in an integrated console in an IDE.
 
 Adapted from <http://stackoverflow.com/questions/3160699/python-progress-bar>
-    
-    
+
     import sys
     
     class ProgressBar(object):
@@ -962,15 +862,13 @@ Adapted from <http://stackoverflow.com/questions/3160699/python-progress-bar>
                 sys.stdout.write("\n")
     
     net.run(duration, report=ProgressBar(), report_period=1*second)
-    
 
 **“Standalone Mode” Text based progress bar on console**
 
 This needs a “normal” Linux console, i.e. it might not work in an integrated console in an IDE.
 
 Adapted from <https://stackoverflow.com/questions/14539867/how-to-display-a-progress-indicator-in-pure-c-c-cout-printf>
-    
-    
+
     set_device('cpp_standalone')
     
     report_func = '''
@@ -993,7 +891,6 @@ Adapted from <https://stackoverflow.com/questions/14539867/how-to-display-a-prog
         }
     '''
     run(100*second, report=report_func)
-    
 
 ---
 
@@ -1132,8 +1029,7 @@ For stochastic equations with several `xi` values it is necessary to make clear 
 Equations defining neuronal or synaptic equations can contain references to external constants or functions. These references are looked up at the time that the simulation is run. If you don’t specify where to look them up, it will look in the Python local/global namespace (i.e. the block of code where you call [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run")). If you want to override this, you can specify an explicit “namespace”. This is a Python dictionary with keys being variable names as they appear in the equations, and values being the desired value of that variable. This namespace can be specified either in the creation of the group or when you can the [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run") function using the `namespace` keyword argument.
 
 The following three examples show the different ways of providing external variable values, all having the same effect in this case:
-    
-    
+
     # Explicit argument to the NeuronGroup
     G = NeuronGroup(1, 'dv/dt = -v / tau : 1', namespace={'tau': 10*ms})
     net = Network(G)
@@ -1149,105 +1045,85 @@ The following three examples show the different ways of providing external varia
     net = Network(G)
     tau = 10*ms
     net.run(10*ms)
-    
 
 See [Namespaces](../advanced/namespaces.html) for more details.
 
 The following topics are not essential for beginners.
 
-  
 
 ## Flags
 
 A _flag_ is a keyword in parentheses at the end of the line, which qualifies the equations. There are several keywords:
 
 _event-driven_
-    
 
 this is only used in Synapses, and means that the differential equation should be updated only at the times of events. This implies that the equation is taken out of the continuous state update, and instead a event-based state update statement is generated and inserted into event codes (pre and post). This can only qualify differential equations of synapses. Currently, only one-dimensional linear equations can be handled (see below).
 
 _unless refractory_
-    
 
 this means the variable is not updated during the refractory period. This can only qualify differential equations of neuron groups.
 
 _constant_
-    
 
 this means the parameter will not be changed during a run. This allows optimizations in state updaters. This can only qualify parameters.
 
 _constant over dt_
-    
 
 this means that the subexpression will be only evaluated once at the beginning of the time step. This can be useful to e.g. approximate a non-linear term as constant over a time step in order to use the `linear` numerical integration algorithm. It is also mandatory for subexpressions that refer to stateful functions like `rand()` to make sure that they are only evaluated once (otherwise e.g. recording the value with a [`StateMonitor`](../reference/brian2.monitors.statemonitor.StateMonitor.html#brian2.monitors.statemonitor.StateMonitor "brian2.monitors.statemonitor.StateMonitor") would re-evaluate it and therefore not record the same values that are used in other places). This can only qualify subexpressions.
 
 _shared_
-    
 
 this means that a parameter or subexpression is not neuron-/synapse-specific but rather a single value for the whole [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") or [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses"). A shared subexpression can only refer to other shared variables.
 
 _linked_
-    
 
 this means that a parameter refers to a parameter in another [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"). See [Linked variables](models.html#linked-variables) for more details.
 
 Multiple flags may be specified as follows:
-    
-    
+
     dx/dt = f : unit (flag1,flag2)
-    
 
 ## List of special symbols
 
 The following lists all of the special symbols that Brian uses in equations and code blocks, and their meanings.
 
 dt
-    
 
 Time step width
 
 i
-    
 
 Index of a neuron ([`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup")) or the pre-synaptic neuron of a synapse ([`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses"))
 
 j
-    
 
 Index of a post-synaptic neuron of a synapse
 
 lastspike
-    
 
 Last time that the neuron spiked (for refractoriness)
 
 lastupdate
-    
 
 Time of the last update of synaptic variables in event-driven equations (only defined when event-driven equations are used).
 
 N
-    
 
 Number of neurons ([`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup")) or synapses ([`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses")). Use `N_pre` or `N_post` for the number of presynaptic or postsynaptic neurons in the context of [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses").
 
 not_refractory
-    
 
 Boolean variable that is normally true, and false if the neuron is currently in a refractory state
 
 t
-    
 
 Current time
 
 t_in_timesteps
-    
 
 Current time measured in time steps
 
 xi, xi_*
-    
 
 Stochastic differential in equations
 
@@ -1264,31 +1140,24 @@ Currently, automatic event-driven updates are only possible for one-dimensional 
 ## Equation objects
 
 The model definitions for [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") and [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") can be simple strings or [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.equations.equations.Equations "brian2.equations.equations.Equations") objects. Such objects can be combined using the add operator:
-    
-    
+
     eqs = Equations('dx/dt = (y-x)/tau : volt')
     eqs += Equations('dy/dt = -y/tau: volt')
-    
 
 [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.equations.equations.Equations "brian2.equations.equations.Equations") allow for the specification of values in the strings, but does this by simple string replacement, e.g. you can do:
-    
-    
+
     eqs = Equations('dx/dt = x/tau : volt', tau=10*ms)
-    
 
 but this is exactly equivalent to:
-    
-    
+
     eqs = Equations('dx/dt = x/(10*ms) : volt')
-    
 
 The [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.equations.equations.Equations "brian2.equations.equations.Equations") object does some basic syntax checking and will raise an error if two equations defining the same variable are combined. It does not however do unit checking, checking for unknown identifiers or incorrect flags – all this will be done during the instantiation of a [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") or [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") object.
 
 ## Examples of `Equation` objects
 
 **Concatenating equations**
-    
-    
+
     >>> membrane_eqs = Equations('dv/dt = -(v + I)/ tau : volt')
     >>> eqs1 = membrane_eqs + Equations('''I = sin(2*pi*freq*t) : volt
     ...                                    freq : Hz''')
@@ -1300,11 +1169,9 @@ The [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.
     >>> print(eqs2)
     dv/dt = -(v + I)/ tau : V
     I : V
-    
 
 **Substituting variable names**
-    
-    
+
     >>> general_equation = 'dg/dt = -g / tau : siemens'
     >>> eqs_exc = Equations(general_equation, g='g_e', tau='tau_e')
     >>> eqs_inh = Equations(general_equation, g='g_i', tau='tau_i')
@@ -1312,16 +1179,13 @@ The [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.
     dg_e/dt = -g_e / tau_e : S
     >>> print(eqs_inh)
     dg_i/dt = -g_i / tau_i : S
-    
 
 **Inserting values**
-    
-    
+
     >>> eqs = Equations('dv/dt = mu/tau + sigma/tau**.5*xi : volt',
     ...                  mu=-65*mV, sigma=3*mV, tau=10*ms)
     >>> print(eqs)
     dv/dt = (-65. * mvolt)/(10. * msecond) + (3. * mvolt)/(10. * msecond)**.5*xi : V
-    
 
 ---
 
@@ -1344,14 +1208,12 @@ The `numb_proc` variable set the number of processes. `run_sim` is just a toy ex
 For more details see the [github issue 1154](https://github.com/brian-team/brian2/issues/1154#issuecomment-582994117):
 
 Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multiprocessing.html#module-multiprocessing "\(in Python v3.12\)") module cannot deal with user-defined functions (including [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray")) and other complex code structures. If you run into `PicklingError` or [`AttributeError`](https://docs.python.org/3/library/exceptions.html#AttributeError "\(in Python v3.12\)") exceptions, you might have to use the `pathos` (<https://pypi.org/project/pathos>) package instead, which can handle more complex code structures.
-    
-    
+
     import os
     import multiprocessing
     
     from brian2 import *
-    
-    
+
     def run_sim(tau):
         pid = os.getpid()
         print(f'RUNNING {pid}')
@@ -1361,8 +1223,7 @@ Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multi
         run(100*ms)
         print(f'FINISHED {pid}')
         return mon.t/ms, mon.v[0]
-    
-    
+
     if __name__ == "__main__":
         num_proc = 4
     
@@ -1374,7 +1235,6 @@ Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multi
             plt.plot(t, v, label=str(tau_value))
         plt.legend()
         plt.show()
-    
 
 ![../_images/multiprocessing.01_using_cython.1.png](../_images/multiprocessing.01_using_cython.1.png)
 
@@ -1411,8 +1271,7 @@ The `numb_proc` sets the number of processes. `run_sim` is just a toy example th
 For more details see the [discussion in the Brian forum](https://brian.discourse.group/t/multiprocessing-in-standalone-mode/142/2).
 
 Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multiprocessing.html#module-multiprocessing "\(in Python v3.12\)") module cannot deal with user-defined functions (including [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray")) and other complex code structures. If you run into `PicklingError` or [`AttributeError`](https://docs.python.org/3/library/exceptions.html#AttributeError "\(in Python v3.12\)") exceptions, you might have to use the `pathos` (<https://pypi.org/project/pathos>) package instead, which can handle more complex code structures.
-    
-    
+
     import os
     import multiprocessing
     from time import time as wall_time
@@ -1438,8 +1297,7 @@ Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multi
     
         print(f'FINISHED {pid}')
         return res
-    
-    
+
     if __name__ == "__main__":
         start_time = wall_time()
     
@@ -1454,7 +1312,6 @@ Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multi
             plt.plot(t, v, label=str(tau_value))
         plt.legend()
         plt.show()
-    
 
 ![../_images/multiprocessing.02_using_standalone.1.png](../_images/multiprocessing.02_using_standalone.1.png)
 
@@ -1471,14 +1328,12 @@ Source: https://brian2.readthedocs.io/en/stable/examples/multiprocessing.03_stan
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/multiprocessing/03_standalone_joblib.ipynb)
 
 This example use C++ standalone mode for the simulation and the [joblib library](https://joblib.readthedocs.io) to parallelize the code. See the previous example (`02_using_standalone.py`) for more explanations.
-    
-    
+
     from joblib import Parallel, delayed
     from time import time as wall_time
     from brian2 import *
     import os
-    
-    
+
     def run_sim(tau):
         pid = os.getpid()
         directory = f"standalone{pid}"
@@ -1498,8 +1353,7 @@ This example use C++ standalone mode for the simulation and the [joblib library]
     
         print(f'FINISHED {pid}')
         return res
-    
-    
+
     if __name__ == "__main__":
         start_time = wall_time()
     
@@ -1514,7 +1368,6 @@ This example use C++ standalone mode for the simulation and the [joblib library]
             plt.plot(t, v, label=str(tau_value))
         plt.legend()
         plt.show()
-    
 
 ![../_images/multiprocessing.03_standalone_joblib.1.png](../_images/multiprocessing.03_standalone_joblib.1.png)
 
@@ -1540,7 +1393,6 @@ Clock-driven implementation (no spike time interpolation)
 
   18. Brette - Dec 2007
 
-    
     
     from brian2 import *
     
@@ -1605,7 +1457,6 @@ Clock-driven implementation (no spike time interpolation)
     xlabel('t (ms)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/COBAHH.1.png](../_images/COBAHH.1.png)
 
@@ -1624,8 +1475,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/advanced.COBAHH_approxi
 Follows exercise 4, chapter 2 of Eugene M. Izhikevich: Dynamical Systems in Neuroscience
 
 Sebastian Schmitt, 2021
-    
-    
+
     import argparse
     from functools import reduce
     import operator
@@ -1637,8 +1487,7 @@ Sebastian Schmitt, 2021
     from brian2 import run
     from brian2 import mS, cmeter, ms, mV, uA, uF
     from brian2 import Equations, NeuronGroup, StateMonitor, TimedArray, defaultclock
-    
-    
+
     def construct_gating_variable_inf_equation(gating_variable):
         """Construct the voltage-dependent steady-state gating variable equation.
     
@@ -1651,8 +1500,7 @@ Sebastian Schmitt, 2021
                          xinf=f'{gating_variable}_inf',
                          v_half=f'v_{gating_variable}_half',
                          k=f'k_{gating_variable}')
-    
-    
+
     def construct_gating_variable_tau_equation(gating_variable):
         """Construct the voltage-dependent gating variable time constant equation.
     
@@ -1667,8 +1515,7 @@ Sebastian Schmitt, 2021
                          c_amp=f'c_{gating_variable}_amp',
                          v_max=f'v_{gating_variable}_max',
                          sigma=f'sigma_{gating_variable}')
-    
-    
+
     def construct_gating_variable_ode(gating_variable):
         """Construct the ordinary differential equation of the gating variable.
     
@@ -1679,8 +1526,7 @@ Sebastian Schmitt, 2021
                          x=gating_variable,
                          xinf=f'{gating_variable}_inf',
                          tau=f'tau_{gating_variable}')
-    
-    
+
     def construct_neuron_ode():
         """Construct the ordinary differential equation of the membrane."""
     
@@ -1700,8 +1546,7 @@ Sebastian Schmitt, 2021
         membrane_eq = Equations('dv/dt = (I_ext - I_K - I_Na - I_L)/C_mem : volt')
     
         return [g_K_eq, g_Na_eq, I_K_eq, I_Na_eq, I_L_eq, I_ext_eq, membrane_eq]
-    
-    
+
     def plot_tau(ax, parameters):
         """Plot gating variable time constants as function of membrane potential.
     
@@ -1728,8 +1573,7 @@ Sebastian Schmitt, 2021
         ax.yaxis.set_label_position("right")
         ax.yaxis.tick_right()
         ax.legend()
-    
-    
+
     def plot_inf(ax, parameters):
         """Plot gating variable steady-state values as function of membrane potential.
     
@@ -1752,8 +1596,7 @@ Sebastian Schmitt, 2021
         ax.yaxis.set_label_position("right")
         ax.yaxis.tick_right()
         ax.legend()
-    
-    
+
     def plot_membrane_voltage(ax, statemon):
         """Plot simulation result: membrane potential.
     
@@ -1766,8 +1609,7 @@ Sebastian Schmitt, 2021
         ax.set_ylabel('$v$ (mV)')
         ax.axhline(0, linestyle='dashed')
         ax.legend()
-    
-    
+
     def plot_gating_variable_activations(ax, statemon):
         """Plot simulation result: gating variables.
     
@@ -1781,8 +1623,7 @@ Sebastian Schmitt, 2021
         ax.set_xlabel('$t$ (ms)')
         ax.set_ylabel('activation')
         ax.legend()
-    
-    
+
     def plot_conductances(ax, statemon):
         """Plot simulation result: conductances.
     
@@ -1799,8 +1640,7 @@ Sebastian Schmitt, 2021
         ax.set_xlabel('$t$ (ms)')
         ax.set_ylabel('$g$ (mS/cm$^2$)')
         ax.legend()
-    
-    
+
     def plot_currents(ax, statemon):
         """Plot simulation result: currents.
     
@@ -1822,8 +1662,7 @@ Sebastian Schmitt, 2021
         ax.set_xlabel('$t$ (ms)')
         ax.set_ylabel(r'I ($\mu$A/cm$^2$)')
         ax.legend()
-    
-    
+
     def plot_current_stimulus(ax, statemon):
         """Plot simulation result: external current stimulus.
     
@@ -1837,8 +1676,7 @@ Sebastian Schmitt, 2021
         ax.set_xlabel('$t$ (ms)')
         ax.set_ylabel(r'I ($\mu$A/cm$^2$)')
         ax.legend()
-    
-    
+
     def plot_gating_variable_time_constants(ax, statemon):
         """Plot simulation result: gating variable time constants.
     
@@ -1853,8 +1691,7 @@ Sebastian Schmitt, 2021
         ax.set_xlabel('$t$ (ms)')
         ax.set_ylabel(r'$\tau$ (ms)')
         ax.legend()
-    
-    
+
     def run_simulation(parameters):
         """Run the simulation.
     
@@ -1891,8 +1728,7 @@ Sebastian Schmitt, 2021
         run(parameters["duration"])
     
         return statemon
-    
-    
+
     def main(parameters):
         """Run simulation and return matplotlib figure.
     
@@ -1924,8 +1760,7 @@ Sebastian Schmitt, 2021
         plot_inf(ax7, parameters)
     
         return fig
-    
-    
+
     parameters = {
     
         # Boltzmann function parameters
@@ -1993,7 +1828,6 @@ Sebastian Schmitt, 2021
     fig = main(parameters)
     
     plt.show()
-    
 
 ![../_images/advanced.COBAHH_approximated.1.png](../_images/advanced.COBAHH_approximated.1.png)
 
@@ -2016,8 +1850,7 @@ Simulation of networks of spiking neurons: A review of tools and strategies (200
 Benchmark 2: random network of integrate-and-fire neurons with exponential synaptic currents.
 
 Clock-driven implementation with exact subthreshold integration (but spike times are aligned to the grid).
-    
-    
+
     from brian2 import *
     
     taum = 20*ms
@@ -2054,7 +1887,6 @@ Clock-driven implementation with exact subthreshold integration (but spike times
     xlabel('Time (ms)')
     ylabel('Neuron index')
     show()
-    
 
 ![../_images/CUBA.1.png](../_images/CUBA.1.png)
 
@@ -2075,8 +1907,7 @@ Input-Frequency curve of a HH model.
 Network: 100 unconnected Hodgin-Huxley neurons with an input current I. The input is set differently for each neuron.
 
 This simulation should use exponential Euler integration.
-    
-    
+
     from brian2 import *
     
     num_neurons = 100
@@ -2117,7 +1948,6 @@ This simulation should use exponential Euler integration.
     xlabel('I (nA)')
     ylabel('Firing rate (sp/s)')
     show()
-    
 
 ![../_images/IF_curve_Hodgkin_Huxley.1.png](../_images/IF_curve_Hodgkin_Huxley.1.png)
 
@@ -2136,8 +1966,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/IF_curve_LIF.html
 Input-Frequency curve of a IF model.
 
 Network: 1000 unconnected integrate-and-fire neurons (leaky IF) with an input parameter v0. The input is set differently for each neuron.
-    
-    
+
     from brian2 import *
     
     n = 1000
@@ -2159,7 +1988,6 @@ Network: 1000 unconnected integrate-and-fire neurons (leaky IF) with an input pa
     xlabel('v0 (mV)')
     ylabel('Firing rate (sp/s)')
     show()
-    
 
 ![../_images/IF_curve_LIF.1.png](../_images/IF_curve_LIF.1.png)
 
@@ -2182,8 +2010,7 @@ Figure 2: Two realizations of the Ornstein-Uhlenbeck process for parameters τ=1
 Andre Longtin (2010) Stochastic dynamical systems. Scholarpedia, 5(4):1619.
 
 Sebastian Schmitt, 2022
-    
-    
+
     import matplotlib.pyplot as plt
     import numpy as np
     
@@ -2221,7 +2048,6 @@ Sebastian Schmitt, 2022
     plt.legend()
     
     plt.show()
-    
 
 ![../_images/advanced.Ornstein_Uhlenbeck.1.png](../_images/advanced.Ornstein_Uhlenbeck.1.png)
 
@@ -2240,8 +2066,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.STDP.html
 Spike-timing dependent plasticity
 
 Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
-    
-    
+
     from brian2 import *
     
     N = 1000
@@ -2298,7 +2123,6 @@ Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
     ylabel('Weight / gmax')
     tight_layout()
     show()
-    
 
 ![../_images/synapses.STDP.1.png](../_images/synapses.STDP.1.png)
 
@@ -2317,8 +2141,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/standalone.STDP_standal
 Spike-timing dependent plasticity. Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001).
 
 This example is modified from `synapses_STDP.py` and writes a standalone C++ project in the directory `STDP_standalone`.
-    
-    
+
     from brian2 import *
     
     set_device('cpp_standalone', directory='STDP_standalone')
@@ -2377,7 +2200,6 @@ This example is modified from `synapses_STDP.py` and writes a standalone C++ pro
     ylabel('Weight / gmax')
     tight_layout()
     show()
-    
 
 ![../_images/standalone.STDP_standalone.1.png](../_images/standalone.STDP_standalone.1.png)
 
@@ -2394,8 +2216,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/adaptive_threshold.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/adaptive_threshold.ipynb)
 
 A model with adaptive threshold (increases with each spike)
-    
-    
+
     from brian2 import *
     
     eqs = '''
@@ -2433,7 +2254,6 @@ A model with adaptive threshold (increases with each spike)
     hist(M_crossings.v / mV, bins=np.arange(10, 20, 0.5))
     xlabel('v at threshold crossing (mV)')
     show()
-    
 
 ![../_images/adaptive_threshold.1.png](../_images/adaptive_threshold.1.png)
 
@@ -2450,8 +2270,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.bipolar_c
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/bipolar_cell.ipynb)
 
 A pseudo MSO neuron, with two dendrites and one axon (fake geometry).
-    
-    
+
     from brian2 import *
     
     # Morphology
@@ -2495,7 +2314,6 @@ A pseudo MSO neuron, with two dendrites and one axon (fake geometry).
     xlabel('Time (ms)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/compartmental.bipolar_cell.1.png](../_images/compartmental.bipolar_cell.1.png)
 
@@ -2512,8 +2330,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.bipolar_w
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/bipolar_with_inputs.ipynb)
 
 A pseudo MSO neuron, with two dendrites (fake geometry). There are synaptic inputs.
-    
-    
+
     from brian2 import *
     
     # Morphology
@@ -2569,7 +2386,6 @@ A pseudo MSO neuron, with two dendrites (fake geometry). There are synaptic inpu
     xlabel('Time (ms)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/compartmental.bipolar_with_inputs.1.png](../_images/compartmental.bipolar_with_inputs.1.png)
 
@@ -2588,8 +2404,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.bipolar_w
 A pseudo MSO neuron, with two dendrites (fake geometry). There are synaptic inputs.
 
 Second method.
-    
-    
+
     from brian2 import *
     
     # Morphology
@@ -2641,7 +2456,6 @@ Second method.
     xlabel('Time (ms)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/compartmental.bipolar_with_inputs2.1.png](../_images/compartmental.bipolar_with_inputs2.1.png)
 
@@ -2662,8 +2476,7 @@ Example using GSL ODE solvers with a variable time step and comparing it to the 
 For highly accurate simulations, i.e. simulations with a very low desired error, the GSL simulation with a variable time step can be faster because it uses a low time step only when it is necessary. In biologically detailed models (e.g. of the Hodgkin-Huxley type), the relevant time constants are very short around an action potential, but much longer when the neuron is near its resting potential. The following example uses a very simple neuron model (leaky integrate-and-fire), but simulates a change in relevant time constants by changing the actual time constant every 10ms, independently for each of 100 neurons. To accurately simulate this model with a fixed time step, the time step has to be very small, wasting many unnecessary steps for all the neurons where the time constant is long.
 
 Note that using the GSL ODE solver is much slower, if both methods use a comparable number of steps, i.e. if the desired accuracy is low enough so that a single step per “Brian time step” is enough.
-    
-    
+
     from brian2 import *
     import time
     
@@ -2671,8 +2484,7 @@ Note that using the GSL ODE solver is much slower, if both methods use a compara
     start_dt = .1 * ms
     method = 'rk2'
     error = 1.e-6  # requested accuracy
-    
-    
+
     def runner(method, dt, options=None):
         seed(0)
         I = 5
@@ -2696,8 +2508,7 @@ Note that using the GSL ODE solver is much slower, if both methods use a compara
         mon.add_attribute('run_time')
         mon.run_time = time.time() - start
         return mon
-    
-    
+
     lin = runner('linear', start_dt)
     method_options = {'save_step_count': True,
                       'absolute_error': error,
@@ -2764,7 +2575,6 @@ Note that using the GSL ODE solver is much slower, if both methods use a compara
     ax2.legend(loc='lower left')
     
     plt.show()
-    
 
 ![../_images/advanced.compare_GSL_to_conventional.1.png](../_images/advanced.compare_GSL_to_conventional.1.png)
 
@@ -2794,7 +2604,6 @@ References:
 
   * [Discussion in Brian forum](https://brian.discourse.group/t/how-to-implement-a-conductance-base-synapse/77/2)
 
-    
     
     from brian2 import *
     
@@ -2880,7 +2689,6 @@ References:
     ax[1].legend()
     
     plt.show()
-    
 
 ![../_images/synapses.continuous_interaction.1.png](../_images/synapses.continuous_interaction.1.png)
 
@@ -2905,8 +2713,7 @@ where \\(\omega_i\\) is the intrinsic frequency of each oscillator, \\(K\\) is t
 The plots show a dot on the unit circle denoting the phase of each neuron (with the color representing the initial phase at the start of the simulation). The black dot and line show the average phase (dot) and the phase coherence (length of the line). The simulations are run four times with different coupling strengths \\(K\\), each simulation starting from the same initial phase distribution.
 
 <https://en.wikipedia.org/wiki/Kuramoto_model>
-    
-    
+
     import matplotlib.animation as animation
     
     from brian2 import *
@@ -2915,8 +2722,7 @@ The plots show a dot on the unit circle denoting the phase of each neuron (with 
     ### global parameters
     N = 100
     defaultclock.dt = 1*ms
-    
-    
+
     ### simulation code
     def run_sim(K, random_seed=214040893):
         seed(random_seed)
@@ -2973,8 +2779,7 @@ The plots show a dot on the unit circle denoting the phase of each neuron (with 
             ax.set_axis_off()
             ax.set(xlim=(-1.2, 1.2), ylim=(-1.2, 1.2))
             artists.append((dots, arrow, mean_dot))
-    
-    
+
         def update(frame_number):
             updated_artists = []
             for (dots, arrow, mean_dot), K, Theta in zip(artists, K_values, theta_values):
@@ -3006,7 +2811,6 @@ The plots show a dot on the unit circle denoting the phase of each neuron (with 
         ani = do_animation(fig, axs.flat, K_values, theta_values)
     
         plt.show()
-    
 
 ![../_images/coupled_oscillators.1.gif](../_images/coupled_oscillators.1.gif)
 
@@ -3023,8 +2827,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/standalone.cuba_openmp.
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/standalone/cuba_openmp.ipynb)
 
 Run the `cuba.py` example with OpenMP threads.
-    
-    
+
     from brian2 import *
     
     set_device('cpp_standalone', directory='CUBA')
@@ -3064,7 +2867,6 @@ Run the `cuba.py` example with OpenMP threads.
     xlabel('Time (ms)')
     ylabel('Neuron index')
     show()
-    
 
 ![../_images/standalone.cuba_openmp.1.png](../_images/standalone.cuba_openmp.1.png)
 
@@ -3083,8 +2885,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/advanced.custom_events.
 Example demonstrating the use of custom events.
 
 Here we have three neurons, the first is Poisson spiking and connects to neuron G, which in turn connects to neuron H. Neuron G has two variables v and g, and the incoming Poisson spikes cause an instantaneous increase in variable g. g decays rapidly, and in turn causes a slow increase in v. If v crosses a threshold, it causes a standard spike and reset. If g crosses a threshold, it causes a custom event `gspike`, and if it returns below that threshold it causes a custom event `end_gspike`. The standard spike event when v crosses a threshold causes an instantaneous increase in variable x in neuron H (which happens through the standard `pre` pathway in the synapses), and the gspike event causes an increase in variable y (which happens through the custom pathway `gpath`).
-    
-    
+
     from brian2 import *
     # Input Poisson spikes
     inp = PoissonGroup(1, rates=250*Hz)
@@ -3142,7 +2943,6 @@ Here we have three neurons, the first is Poisson spiking and connects to neuron 
     legend(loc='best')
     tight_layout()
     show()
-    
 
 ![../_images/advanced.custom_events.1.png](../_images/advanced.custom_events.1.png)
 
@@ -3159,8 +2959,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.cylinder.
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/cylinder.ipynb)
 
 A short cylinder with constant injection at one end.
-    
-    
+
     from brian2 import *
     
     defaultclock.dt = 0.01*ms
@@ -3200,7 +2999,6 @@ A short cylinder with constant injection at one end.
     xlabel('x (um)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/compartmental.cylinder.1.png](../_images/compartmental.cylinder.1.png)
 
@@ -3219,27 +3017,22 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.efficient_gaus
 An example of turning an expensive [`Synapses.connect`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses.connect "brian2.synapses.synapses.Synapses.connect") operation into three cheap ones using a mathematical trick.
 
 Consider the connection probability between neurons i and j given by the Gaussian function \\(p=e^{-\alpha(i-j)^2}\\) (for some constant \\(\alpha\\)). If we want to connect neurons with this probability, we can very simply do:
-    
-    
+
     S.connect(p='exp(-alpha*(i-j)**2)')
-    
 
 However, this has a problem. Although we know that this will create \\(O(N)\\) synapses if N is the number of neurons, because we have specified `p` as a function of i and j, we have to evaluate `p(i, j)` for every pair `(i, j)`, and therefore it takes \\(O(N^2)\\) operations.
 
 Our first option is to take a cutoff, and say that if \\(p<q\\) for some small \\(q\\), then we assume that \\(p\approx 0\\). We can work out which j values are compatible with a given value of i by solving \\(e^{-\alpha(i-j)^2}<q\\) which gives \\(|i-j|<\sqrt{-\log(q)/\alpha)}=w\\). Now we implement the rule using the generator syntax to only search for values between `i-w` and `i+w`, except that some of these values will be outside the valid range of values for j so we set `skip_if_invalid=True`. The connection code is then:
-    
-    
+
     S.connect(j='k for k in range(i-w, i+w) if rand()<exp(-alpha*(i-j)**2)',
               skip_if_invalid=True)
-    
 
 This is a lot faster (see graph labelled “Limited” for this algorithm).
 
 However, it may be a problem that we have to specify a cutoff and so we will lose some synapses doing this: it won’t be mathematically exact. This isn’t a problem for the Gaussian because w grows very slowly with the cutoff probability q, but for other probability distributions with more weight in the tails, it could be an issue.
 
 If we want to be exact, we can still do a big improvement. For the case \\(i-w\leq j\leq i+w\\) we use the same connection code, but we also handle the case \\(|i-j|>w\\). This time, we note that we want to create a synapse with probability \\(p(i-j)\\) and we can rewrite this as \\(p(i-j)/p(w)\cdot p(w)\\). If \\(|i-j|>w\\) then this is a product of two probabilities \\(p(i-j)/p(w)\\) and \\(p(w)\\). So in the region \\(|i-j|>w\\) a synapse will be created if two random events both occur, with these two probabilities. This might seem a little strange until you notice that one of the two probabilities \\(p(w)\\) doesn’t depend on i or j. This lets us use the much more efficient `sample` algorithm to generate a set of candidate `j` values, and then add the additional test `rand()<p(i-j)/p(w)`. Here’s the code for that:
-    
-    
+
     w = int(ceil(sqrt(log(q)/-0.1)))
     S.connect(j='k for k in range(i-w, i+w) if rand()<exp(-alpha*(i-j)**2)',
               skip_if_invalid=True)
@@ -3248,13 +3041,11 @@ If we want to be exact, we can still do a big improvement. For the case \\(i-w\l
               skip_if_invalid=True)
     S.connect(j='k for k in sample(i+w, N_post, p=pmax) if rand()<exp(-alpha*(i-j)**2)/pmax',
               skip_if_invalid=True)
-    
 
 This “Divided” method is also much faster than the naive method, and is mathematically correct. Note though that this method is still \\(O(N^2)\\) but the constants are much, much smaller and this will usually be sufficient. It is possible to take the ideas developed here even further and get even better scaling, but in most cases it’s unlikely to be worth the effort.
 
 The code below shows these examples written out, along with some timing code and plots for different values of N.
-    
-    
+
     from brian2 import *
     import time
     
@@ -3303,7 +3094,6 @@ The code below shows these examples written out, along with some timing code and
     ylabel('Time (s)')
     legend(loc='best', frameon=False)
     show()
-    
 
 ![../_images/synapses.efficient_gaussian_connectivity.1.png](../_images/synapses.efficient_gaussian_connectivity.1.png)
 
@@ -3328,8 +3118,7 @@ Rate equations for channel opening/closing rates often include a term of the for
   * For values \\(x \approx 0\\), there is a loss of accuracy.
 
 For better accuracy, and to avoid issues at \\(x = 0\\), Brian provides the function `exprel()`, which is equivalent to \\(\frac{\exp(x) - 1}{x}\\), but with better accuracy and the expected result at \\(x = 0\\). In this example, we demonstrate the advantage of expressing a typical rate equation from the HH model with `exprel()`.
-    
-    
+
     from brian2 import *
     
     # Dummy group to evaluate the rate equation at various points
@@ -3353,7 +3142,6 @@ For better accuracy, and to avoid issues at \\(x = 0\\), Brian provides the func
     ax.ticklabel_format(useOffset=False)
     plt.tight_layout()
     plt.show()
-    
 
 ![../_images/advanced.exprel_function.1.png](../_images/advanced.exprel_function.1.png)
 
@@ -3370,8 +3158,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/advanced.float_32_64_be
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/advanced/float_32_64_benchmark.ipynb)
 
 Benchmark showing the performance of float32 versus float64.
-    
-    
+
     from brian2 import *
     from brian2.devices.device import reset_device, reinit_devices
     
@@ -3525,7 +3312,6 @@ Benchmark showing the performance of float32 versus float64.
     
     tight_layout()
     show()
-    
 
 ---
 
@@ -3540,8 +3326,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.gapjunctions.h
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/gapjunctions.ipynb)
 
 Neurons with gap junctions.
-    
-    
+
     from brian2 import *
     
     n = 10
@@ -3572,7 +3357,6 @@ Neurons with gap junctions.
     xlabel('Time (ms)')
     ylabel('v')
     show()
-    
 
 ![../_images/synapses.gapjunctions.1.png](../_images/synapses.gapjunctions.1.png)
 
@@ -3591,8 +3375,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.hh_with_s
 Hodgkin-Huxley equations (1952).
 
 Spikes are recorded along the axon, and then velocity is calculated.
-    
-    
+
     from brian2 import *
     from scipy import stats
     
@@ -3658,7 +3441,6 @@ Spikes are recorded along the axon, and then velocity is calculated.
     xlabel('Time (ms)')
     ylabel('Position (cm)')
     show()
-    
 
 ![../_images/compartmental.hh_with_spikes.1.png](../_images/compartmental.hh_with_spikes.1.png)
 
@@ -3675,8 +3457,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.hodgkin_h
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/hodgkin_huxley_1952.ipynb)
 
 Hodgkin-Huxley equations (1952).
-    
-    
+
     from brian2 import *
     
     morpho = Cylinder(length=10*cm, diameter=2*238*um, n=1000, type='axon')
@@ -3729,7 +3510,6 @@ Hodgkin-Huxley equations (1952).
     xlabel('Position (cm)')
     axis('tight')
     show()
-    
 
 ![../_images/compartmental.hodgkin_huxley_1952.1.png](../_images/compartmental.hodgkin_huxley_1952.1.png)
 
@@ -3746,8 +3526,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.infinite_
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/infinite_cable.ipynb)
 
 An (almost) infinite cable with pulse injection in the middle.
-    
-    
+
     from brian2 import *
     
     defaultclock.dt = 0.001*ms
@@ -3797,7 +3576,6 @@ An (almost) infinite cable with pulse injection in the middle.
     xlabel('Time (ms)')
     ylabel('v (mV')
     show()
-    
 
 ![../_images/compartmental.infinite_cable.1.png](../_images/compartmental.infinite_cable.1.png)
 
@@ -3814,8 +3592,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.jeffress.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/jeffress.ipynb)
 
 Jeffress model, adapted with spiking neuron models. A sound source (white noise) is moving around the head. Delay differences between the two ears are used to determine the azimuth of the source. Delays are mapped to a neural place code using delay lines (each neuron receives input from both ears, with different delays).
-    
-    
+
     from brian2 import *
     
     defaultclock.dt = .02*ms
@@ -3875,7 +3652,6 @@ Jeffress model, adapted with spiking neuron models. A sound source (white noise)
     xlim(0, 1000)
     tight_layout()
     show()
-    
 
 ![../_images/synapses.jeffress.1.png](../_images/synapses.jeffress.1.png)
 
@@ -3894,8 +3670,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.lfp.html
 Hodgkin-Huxley equations (1952)
 
 We calculate the extracellular field potential at various places.
-    
-    
+
     from brian2 import *
     defaultclock.dt = 0.01*ms
     morpho = Cylinder(x=[0, 10]*cm, diameter=2*238*um, n=1000, type='axon')
@@ -3969,7 +3744,6 @@ We calculate the extracellular field potential at various places.
     ylabel('LFP (mV)')
     xlabel('Time (ms)')
     show()
-    
 
 ![../_images/compartmental.lfp.1.png](../_images/compartmental.lfp.1.png)
 
@@ -3986,8 +3760,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.licklider.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/licklider.ipynb)
 
 Spike-based adaptation of Licklider’s model of pitch processing (autocorrelation with delay lines) with phase locking.
-    
-    
+
     from brian2 import *
     
     defaultclock.dt = .02 * ms
@@ -4030,7 +3803,6 @@ Spike-based adaptation of Licklider’s model of pitch processing (autocorrelati
     yticks([0, 99, 199, 299],
            array(1. / synapses.delay[1, [0, 99, 199, 299]], dtype=int))
     show()
-    
 
 ![../_images/synapses.licklider.1.png](../_images/synapses.licklider.1.png)
 
@@ -4053,10 +3825,8 @@ In this example, a HH-type model is used to demonstrate simulation-based inferen
 For more details about this approach, see the references below.
 
 To run this example, you need to install the sbi package, e.g. with:
-    
-    
+
     pip install sbi
-    
 
 References:
 
@@ -4064,7 +3834,6 @@ References:
 
   * Tejero-Cantero et al., (2020). sbi: A toolkit for simulation-based inference. Journal of Open Source Software, 5(52), 2505, <https://doi.org/10.21105/joss.02505>
 
-    
     
     import matplotlib.pyplot as plt
     
@@ -4135,8 +3904,7 @@ References:
                     t=Vm_mon.t,
                     I_inj=I_inj,
                     spike_count=spike_mon.count)
-    
-    
+
     def calculate_summary_statistics(x):
         """Calculate summary statistics for results in x"""
         I_inj = x["I_inj"]
@@ -4154,8 +3922,7 @@ References:
         sum_stats = np.vstack((spike_count, mean_active, std_active, max_v))
     
         return sum_stats.T
-    
-    
+
     def simulation_wrapper(params):
         """
         Returns summary statistics from conductance values in `params`.
@@ -4164,8 +3931,7 @@ References:
         obs = simulate(params)
         summstats = torch.as_tensor(calculate_summary_statistics(obs))
         return summstats.to(torch.float32)
-    
-    
+
     if __name__ == '__main__':
         # Define prior distribution over parameters
         prior_min = [.5, 1e-4]  # (gNa, gK) in µS
@@ -4220,7 +3986,6 @@ References:
         ax.legend()
         ax.set(xlabel='time (ms)', ylabel='voltage (mV)')
         plt.show()
-    
 
 ![../_images/advanced.modelfitting_sbi.1.png](../_images/advanced.modelfitting_sbi.1.png) ![../_images/advanced.modelfitting_sbi.2.png](../_images/advanced.modelfitting_sbi.2.png)
 
@@ -4237,8 +4002,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.morphotes
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/morphotest.ipynb)
 
 Demonstrate the usage of the [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") object.
-    
-    
+
     from brian2 import *
     
     # Morphology
@@ -4262,7 +4026,6 @@ Demonstrate the usage of the [`Morphology`](../reference/brian2.spatialneuron.mo
     print(neuron.L.v)
     print(neuron.LL.v)
     print(neuron.L.main.v)
-    
 
 ---
 
@@ -4281,8 +4044,7 @@ Reliability of spike timing.
 See e.g. Mainen & Sejnowski (1995) for experimental results in vitro.
 
 Here: a constant current is injected in all trials.
-    
-    
+
     from brian2 import *
     
     N = 25
@@ -4300,7 +4062,6 @@ Here: a constant current is injected in all trials.
     xlabel('Time (ms)')
     ylabel('Neuron index')
     show()
-    
 
 ![../_images/non_reliability.1.png](../_images/non_reliability.1.png)
 
@@ -4317,8 +4078,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.nonlinear.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/nonlinear.ipynb)
 
 NMDA synapses.
-    
-    
+
     from brian2 import *
     
     a = 1 / (10*ms)
@@ -4358,7 +4118,6 @@ NMDA synapses.
     ylabel('g')
     tight_layout()
     show()
-    
 
 ![../_images/synapses.nonlinear.1.png](../_images/synapses.nonlinear.1.png)
 
@@ -4377,8 +4136,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/advanced.opencv_movie.h
 An example that uses a function from external C library (OpenCV in this case). Works for all C-based code generation targets (i.e. for cython and cpp_standalone device) and for numpy (using the Python bindings).
 
 This example needs a working installation of OpenCV 3.x and its Python bindings. It has been tested on 64 bit Linux in a conda environment with packages from the `conda-forge` channels (opencv 3.4.4, x264 1!152.20180717, ffmpeg 4.1).
-    
-    
+
     import os
     import urllib.request, urllib.error, urllib.parse
     import cv2  # Import OpenCV2
@@ -4456,8 +4214,7 @@ This example needs a working installation of OpenCV 3.x and its Python bindings.
         grayscale = frame.mean(axis=2)
         grayscale /= 128.  # scale everything between 0 and 2
         return grayscale.ravel() - grayscale.ravel().mean()
-    
-    
+
     N = width * height
     tau, tau_th = 10*ms, time_between_frames
     G = NeuronGroup(N, '''dv/dt = (-v + I)/tau : 1
@@ -4506,7 +4263,6 @@ This example needs a working installation of OpenCV 3.x and its Python bindings.
     ani = animation.FuncAnimation(fig, run, next_spikes, blit=False, repeat=True,
                                   repeat_delay=1000)
     plt.show()
-    
 
 ---
 
@@ -4521,8 +4277,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/phase_locking.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/phase_locking.ipynb)
 
 Phase locking of IF neurons to a periodic input.
-    
-    
+
     from brian2 import *
     
     tau = 20*ms
@@ -4552,7 +4307,6 @@ Phase locking of IF neurons to a periodic input.
     ylabel('v')
     tight_layout()
     show()
-    
 
 ![../_images/phase_locking.1.png](../_images/phase_locking.1.png)
 
@@ -4569,8 +4323,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.rall.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/rall.ipynb)
 
 A cylinder plus two branches, with diameters according to Rall’s formula
-    
-    
+
     from brian2 import *
     
     defaultclock.dt = 0.01*ms
@@ -4634,7 +4387,6 @@ A cylinder plus two branches, with diameters according to Rall’s formula
     xlabel('x (um)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/compartmental.rall.1.png](../_images/compartmental.rall.1.png)
 
@@ -4653,8 +4405,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/reliability.html
 Reliability of spike timing.
 
 See e.g. Mainen & Sejnowski (1995) for experimental results in vitro.
-    
-    
+
     from brian2 import *
     
     # The common noisy input
@@ -4680,7 +4431,6 @@ See e.g. Mainen & Sejnowski (1995) for experimental results in vitro.
     xlabel('Time (ms)')
     ylabel('Neuron index')
     show()
-    
 
 ![../_images/reliability.1.png](../_images/reliability.1.png)
 
@@ -4697,8 +4447,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/standalone.simple_case.
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/standalone/simple_case.ipynb)
 
 The most simple case how to use standalone mode.
-    
-    
+
     from brian2 import *
     set_device('cpp_standalone')  # ← only difference to "normal" simulation
     
@@ -4714,7 +4463,6 @@ The most simple case how to use standalone mode.
     plt.plot(mon.t/ms, mon.v.T)
     plt.gca().set(xlabel='t (ms)', ylabel='v')
     plt.show()
-    
 
 ![../_images/standalone.simple_case.1.png](../_images/standalone.simple_case.1.png)
 
@@ -4731,8 +4479,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/standalone.simple_case_
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/standalone/simple_case_build.ipynb)
 
 The most simple case how to use standalone mode with several [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run") calls.
-    
-    
+
     from brian2 import *
     set_device('cpp_standalone', build_on_run=False)
     
@@ -4753,7 +4500,6 @@ The most simple case how to use standalone mode with several [`run()`](../refere
     plt.plot(mon.t/ms, mon.v.T)
     plt.gca().set(xlabel='t (ms)', ylabel='v')
     plt.show()
-    
 
 ![../_images/standalone.simple_case_build.1.png](../_images/standalone.simple_case_build.1.png)
 
@@ -4770,8 +4516,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.spatial_connec
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/spatial_connections.ipynb)
 
 A simple example showing how string expressions can be used to implement spatial (deterministic or stochastic) connection patterns.
-    
-    
+
     from brian2 import *
     
     rows, cols = 20, 20
@@ -4820,7 +4565,6 @@ A simple example showing how string expressions can be used to implement spatial
     
     tight_layout()
     show()
-    
 
 ![../_images/synapses.spatial_connections.1.png](../_images/synapses.spatial_connections.1.png)
 
@@ -4841,8 +4585,7 @@ Following O. Breitwieser: “Towards a Neuromorphic Implementation of Spike-Base
 Two poisson stimuli are connected to a neuron. One with a varying rate and the other with a fixed rate. The synaptic weight from the varying rate stimulus to the neuron is fixed. The synaptic weight from the fixed rate stimulus to the neuron is plastic and tries to keep the neuron at a firing rate that is determined by the parameters of the plasticity rule.
 
 Sebastian Schmitt, 2021
-    
-    
+
     import itertools
     import numpy as np
     import matplotlib.pyplot as plt
@@ -4939,7 +4682,6 @@ Sebastian Schmitt, 2021
     
     plt.xlabel('Time (s)')
     plt.show()
-    
 
 ![../_images/synapses.spike_based_homeostasis.1.png](../_images/synapses.spike_based_homeostasis.1.png)
 
@@ -4956,8 +4698,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/compartmental.spike_ini
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/compartmental/spike_initiation.ipynb)
 
 Ball and stick with Na and K channels
-    
-    
+
     from brian2 import *
     
     defaultclock.dt = 0.025*ms
@@ -5014,7 +4755,6 @@ Ball and stick with Na and K channels
     xlabel('Time (ms)')
     ylabel('v (mV)')
     show()
-    
 
 ![../_images/compartmental.spike_initiation.1.png](../_images/compartmental.spike_initiation.1.png)
 
@@ -5035,8 +4775,7 @@ This example shows how to run several, independent simulations in standalone mod
 The example is a standalone equivalent of the one presented in /tutorials/3-intro-to-brian-simulations.
 
 Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multiprocessing.html#module-multiprocessing "\(in Python v3.12\)") module cannot deal with user-defined functions (including [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray")) and other complex code structures. If you run into `PicklingError` or [`AttributeError`](https://docs.python.org/3/library/exceptions.html#AttributeError "\(in Python v3.12\)") exceptions, you might have to use the `pathos` (<https://pypi.org/project/pathos>) package instead, which can handle more complex code structures.
-    
-    
+
     import numpy as np
     import matplotlib.pyplot as plt
     import brian2 as b2
@@ -5072,8 +4811,7 @@ Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multi
             self.device.run(run_args={self.net['neuron'].tau: tau_i},
                             results_directory=result_dir)
             return self.net["spike_monitor"].num_spikes/ b2.second
-    
-    
+
     if __name__ == "__main__":
         start_time = time()
         num_inputs = 100
@@ -5095,7 +4833,6 @@ Note that Python’s [`multiprocessing`](https://docs.python.org/3/library/multi
         plt.xlabel(r"$\tau$ (ms)")
         plt.ylabel("Firing rate (sp/s)")
         plt.show()
-    
 
 ![../_images/standalone.standalone_multiple_processes.1.png](../_images/standalone.standalone_multiple_processes.1.png)
 
@@ -5114,8 +4851,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/standalone.standalone_m
 This example shows how to run several, independent simulations in standalone mode. Given that this example only involves a single neuron, an alternative – and arguably more elegant – solution would be to run the simulations in a single [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"), where each neuron receives input with a different rate.
 
 The example is a standalone equivalent of the one presented in /tutorials/3-intro-to-brian-simulations.
-    
-    
+
     import numpy as np
     import matplotlib.pyplot as plt
     import brian2 as b2
@@ -5160,7 +4896,6 @@ The example is a standalone equivalent of the one presented in /tutorials/3-intr
         plt.xlabel(r"$\tau$ (ms)")
         plt.ylabel("Firing rate (sp/s)")
         plt.show()
-    
 
 ![../_images/standalone.standalone_multiplerun.1.png](../_images/standalone.standalone_multiplerun.1.png)
 
@@ -5177,8 +4912,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.state_variable
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/state_variables.ipynb)
 
 Set state variable values with a string (using code generation).
-    
-    
+
     from brian2 import *
     
     G = NeuronGroup(100, 'v:volt', threshold='v>-50*mV')
@@ -5204,7 +4938,6 @@ Set state variable values with a string (using code generation).
     title('Synaptic weight')
     tight_layout()
     show()
-    
 
 ![../_images/synapses.state_variables.1.png](../_images/synapses.state_variables.1.png)
 
@@ -5221,8 +4954,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/advanced.stochastic_ode
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/advanced/stochastic_odes.ipynb)
 
 Demonstrate the correctness of the “derivative-free Milstein method” for multiplicative noise.
-    
-    
+
     from brian2 import *
     # We only get exactly the same random numbers for the exact solution and the
     # simulation if we use the numpy code generation target
@@ -5236,8 +4968,7 @@ Demonstrate the correctness of the “derivative-free Milstein method” for mul
     sigma = 0.1/second #diffusion
     
     runtime = 1*second
-    
-    
+
     def simulate(method, dt):
         """
         simulate geometrical Brownian with the given method
@@ -5250,8 +4981,7 @@ Demonstrate the correctness of the “derivative-free Milstein method” for mul
         net = Network(G, mon)
         net.run(runtime)
         return mon.t_[:], mon.X.flatten()
-    
-    
+
     def exact_solution(t, dt):
         """
         Return the exact solution for geometrical Brownian motion at the given
@@ -5325,7 +5055,6 @@ Demonstrate the correctness of the “derivative-free Milstein method” for mul
     tight_layout()
     
     show()
-    
 
 ![../_images/advanced.stochastic_odes.1.png](../_images/advanced.stochastic_odes.1.png) ![../_images/advanced.stochastic_odes.2.png](../_images/advanced.stochastic_odes.2.png) ![../_images/advanced.stochastic_odes.3.png](../_images/advanced.stochastic_odes.3.png)
 
@@ -5342,8 +5071,7 @@ Source: https://brian2.readthedocs.io/en/stable/examples/synapses.synapses.html
 > You can launch an interactive, editable version of this example without installing any local files using the Binder service (although note that at some times this may be slow or fail to open): [![launchbinder](http://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/brian-team/brian2-binder/master?filepath=examples/synapses/synapses.ipynb)
 
 A simple example of using [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses").
-    
-    
+
     from brian2 import *
     
     G1 = NeuronGroup(10, 'dv/dt = -v / (10*ms) : 1',
@@ -5367,7 +5095,6 @@ A simple example of using [`Synapses`](../reference/brian2.synapses.synapses.Syn
     xlabel('Time (ms)')
     ylabel('v')
     show()
-    
 
 ![../_images/synapses.synapses.1.png](../_images/synapses.synapses.1.png)
 
@@ -5428,47 +5155,38 @@ Finally, the function [`timestep`](../reference/brian2.core.functions.timestep.h
 ### Python code generation
 
 If a function is only used in contexts that use Python code generation, preparing a function for use with Brian only means specifying its units. The simplest way to do this is to use the [`check_units()`](../reference/brian2.units.fundamentalunits.check_units.html#brian2.units.fundamentalunits.check_units "brian2.units.fundamentalunits.check_units") decorator:
-    
-    
+
     @check_units(x1=meter, y1=meter, x2=meter, y2=meter, result=meter)
     def distance(x1, y1, x2, y2):
         return sqrt((x1 - x2)**2 + (y1 - y2)**2)
-    
 
 Another option is to wrap the function in a [`Function`](../reference/brian2.core.functions.Function.html#brian2.core.functions.Function "brian2.core.functions.Function") object:
-    
-    
+
     def distance(x1, y1, x2, y2):
         return sqrt((x1 - x2)**2 + (y1 - y2)**2)
     # wrap the distance function
     distance = Function(distance, arg_units=[meter, meter, meter, meter],
                         return_unit=meter)
-    
 
 The use of Brian’s unit system has the benefit of checking the consistency of units for every operation but at the expense of performance. Consider the following function, for example:
-    
-    
+
     @check_units(I=amp, result=Hz)
     def piecewise_linear(I):
         return clip((I-1*nA) * 50*Hz/nA, 0*Hz, 100*Hz)
-    
 
 When Brian runs a simulation, the state variables are stored and passed around without units for performance reasons. If the above function is used, however, Brian adds units to its input argument so that the operations inside the function do not fail with dimension mismatches. Accordingly, units are removed from the return value so that the function output can be used with the rest of the code. For better performance, Brian can alter the namespace of the function when it is executed as part of the simulation and remove all the units, then pass values without units to the function. In the above example, this means making the symbol `nA` refer to `1e-9` and `Hz` to `1`. To use this mechanism, add the decorator [`implementation()`](../reference/brian2.core.functions.implementation.html#brian2.core.functions.implementation "brian2.core.functions.implementation") with the `discard_units` keyword:
-    
-    
+
     @implementation('numpy', discard_units=True)
     @check_units(I=amp, result=Hz)
     def piecewise_linear(I):
         return clip((I-1*nA) * 50*Hz/nA, 0*Hz, 100*Hz)
-    
 
 Note that the use of the function _outside of simulation runs_ is not affected, i.e. using `piecewise_linear` still requires a current in Ampere and returns a rate in Hertz. The `discard_units` mechanism does not work in all cases, e.g. it does not work if the function refers to units as `brian2.nA` instead of `nA`, if it uses imports inside the function (e.g. `from brian2 import nA`), etc. The `discard_units` can also be switched on for all functions without having to use the [`implementation()`](../reference/brian2.core.functions.implementation.html#brian2.core.functions.implementation "brian2.core.functions.implementation") decorator by setting the [codegen.runtime.numpy.discard_units](../reference/brian2.codegen.runtime.numpy_rt.html#brian-pref-codegen-runtime-numpy-discard-units) preference.
 
 ### Other code generation targets
 
 To make a function available for other code generation targets (e.g. C++), implementations for these targets have to be added. This can be achieved using the [`implementation()`](../reference/brian2.core.functions.implementation.html#brian2.core.functions.implementation "brian2.core.functions.implementation") decorator. The form of the code (e.g. a simple string or a dictionary of strings) necessary is target-dependent, for C++ both options are allowed, a simple string will be interpreted as filling the `'support_code'` block. Note that `'cpp'` is used to provide C++ implementations. An implementation for the C++ target could look like this:
-    
-    
+
     @implementation('cpp', '''
          double piecewise_linear(double I) {
             if (I < 1e-9)
@@ -5481,13 +5199,11 @@ To make a function available for other code generation targets (e.g. C++), imple
     @check_units(I=amp, result=Hz)
     def piecewise_linear(I):
         return clip((I-1*nA) * 50*Hz/nA, 0*Hz, 100*Hz)
-    
 
 Alternatively, `FunctionImplementation` objects can be added to the [`Function`](../reference/brian2.core.functions.Function.html#brian2.core.functions.Function "brian2.core.functions.Function") object.
 
 The same sort of approach as for C++ works for Cython using the `'cython'` target. The example above would look like this:
-    
-    
+
     @implementation('cython', '''
         cdef double piecewise_linear(double I):
             if I<1e-9:
@@ -5499,13 +5215,11 @@ The same sort of approach as for C++ works for Cython using the `'cython'` targe
     @check_units(I=amp, result=Hz)
     def piecewise_linear(I):
         return clip((I-1*nA) * 50*Hz/nA, 0*Hz, 100*Hz)
-    
 
 ### Dependencies between functions
 
 The code generation mechanism for user-defined functions only adds the source code for a function when it is necessary. If a user-defined function refers to another function in its source code, it therefore has to explicitly state this dependency so that the code of the dependency is added as well:
-    
-    
+
     @implementation('cpp','''
         double rectified_linear(double x)
         {
@@ -5516,7 +5230,6 @@ The code generation mechanism for user-defined functions only adds the source co
     @check_units(x=1, result=1)
     def rectified_linear(x):
         return np.clip(x, 0, np.inf)
-    
 
 Note
 
@@ -5525,11 +5238,9 @@ The dependency mechanism is unnecessary for the `numpy` code generation target, 
 ### Additional compiler arguments
 
 If the code for a function needs additional compiler options to work, e.g. to link to an external library, these options can be provided as keyword arguments to the `@implementation` decorator. E.g. to link C++ code to the `foo` library which is stored in the directory `/usr/local/foo`, use:
-    
-    
+
     @implementation('cpp', '...',
      libraries=['foo'], library_dirs=['/usr/local/foo'])
-    
 
 These arguments can also be used to refer to external source files, see below. Equivalent arguments can also be set as global [Preferences](preferences.html) in which case they apply to all code and not only to code referring to the respective function. Note that in C++ standalone mode, all files are compiled together, and therefore the additional compiler arguments provided to functions are always combined with the preferences into a common set of settings that is applied to all code.
 
@@ -5554,8 +5265,7 @@ In both cases, the function will only receive the “relevant” values, meaning
 ### Functions with context-dependent return values
 
 When using the `numpy` target, functions have to return an array of values (e.g. one value for each neuron). In some cases, the number of values to return cannot be deduced from the function’s arguments. Most importantly, this is the case for random numbers: a call to `rand()` has to return one value for each neuron if it is part of a neuron’s equations, but only one value for each neuron that spiked during the time step if it is part of the reset statement. Such function are said to “auto vectorise”, which means that their implementation receives an additional array argument `_vectorisation_idx`; the length of this array determines the number of values the function should return. This argument is also provided to functions for other code generation targets, but in these cases it is a single value (e.g. the index of the neuron), and is currently ignored. To enable this property on a user-defined function, you’ll currently have to manually create a [`Function`](../reference/brian2.core.functions.Function.html#brian2.core.functions.Function "brian2.core.functions.Function") object:
-    
-    
+
     def exponential_rand(l, _vectorisation_idx):
         '''Generate a number from an exponential distribution using inverse
            transform sampling'''
@@ -5564,11 +5274,9 @@ When using the `numpy` target, functions have to return an array of values (e.g.
     
     exponential_rand = Function(exponential_rand, arg_units=[1], return_unit=1,
                                 stateless=False, auto_vectorise=True)
-    
 
 Implementations for other code generation targets can then be added using the `add_implementation` mechanism:
-    
-    
+
     cpp_code = '''
     double exponential_rand(double l, int _vectorisation_idx)
     {
@@ -5579,7 +5287,6 @@ Implementations for other code generation targets can then be added using the `a
     exponential_rand.implementations.add_implementation('cpp', cpp_code,
                                                         dependencies={'rand': DEFAULT_FUNCTIONS['rand'],
                                                                       'log': DEFAULT_FUNCTIONS['log']})
-    
 
 Note that by referring to the `rand` function, the new random number generator will automatically generate reproducible random numbers if the [`seed()`](../reference/brian2.devices.device.seed.html#brian2.devices.device.seed "brian2.devices.device.seed") function is use to set its seed. Restoring the random number state with [`restore()`](../reference/brian2.core.magic.restore.html#brian2.core.magic.restore "brian2.core.magic.restore") will have the expected effect as well.
 
@@ -5592,25 +5299,21 @@ See [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.i
 ### Data types
 
 By default, functions are assumed to take any type of argument, and return a floating point value. If you want to put a restriction on the type of an argument, or specify that the return type should be something other than float, either declare it as a [`Function`](../reference/brian2.core.functions.Function.html#brian2.core.functions.Function "brian2.core.functions.Function") (and see its documentation on specifying types) or use the [`declare_types()`](../reference/brian2.core.functions.declare_types.html#brian2.core.functions.declare_types "brian2.core.functions.declare_types") decorator, e.g.:
-    
-    
+
     @check_units(a=1, b=1, result=1)
     @declare_types(a='integer', result='highest')
     def f(a, b):
         return a*b
-    
 
 This is potentially important if you have functions that return integer or boolean values, because Brian’s code generation optimisation step will make some potentially incorrect simplifications if it assumes that the return type is floating point.
 
 ### External source files
 
 Code for functions can also be provided via external files in the target language. This can be especially useful for linking to existing code without having to include it a second time in the Python script. For C++-based code generation targets (i.e. the C++ standalone mode), the external code should be in a file that is provided as an argument to the `sources` keyword, together with a header file whose name is provided to `headers` (see the note for the [codegen.cpp.headers](../reference/brian2.codegen.html#brian-pref-codegen-cpp-headers) preference about the necessary format). Since the main simulation code is compiled and executed in a different directory, you should also point the compiler towards the directory of the header file via the `include_dirs` keyword. For the same reason, use an absolute path for the source file. For example, the `piecewise_linear` function from above can be implemented with external files as follows:
-    
-    
+
     //file: piecewise_linear.h
     double piecewise_linear(double);
-    
-    
+
     
     //file: piecewise_linear.cpp
     double piecewise_linear(double I) {
@@ -5620,8 +5323,7 @@ Code for functions can also be provided via external files in the target languag
             return 100;
         return (I/1e-9 - 1) * 50;
     }
-    
-    
+
     
     # Python script
     
@@ -5638,17 +5340,14 @@ Code for functions can also be provided via external files in the target languag
     @check_units(I=amp, result=Hz)
     def piecewise_linear(I):
         return clip((I-1*nA) * 50*Hz/nA, 0*Hz, 100*Hz)
-    
 
 For Cython, the process is very similar (see the [Cython documentation](https://cython.readthedocs.io/en/latest/src/userguide/sharing_declarations.html) for general information). The name of the header file does not need to be specified, it is expected to have the same name as the source file (except for the `.pxd` extension). The source and header files will be automatically copied to the cache directory where Cython files are compiled, they therefore have to be imported as top-level modules, regardless of whether the executed Python code is itself in a package or module.
 
 A Cython equivalent of above’s C++ example can be written as:
-    
-    
+
     # file: piecewise_linear.pxd
     cdef double piecewise_linear(double)
-    
-    
+
     
     # file: piecewise_linear.pyx
     cdef double piecewise_linear(double I):
@@ -5657,8 +5356,7 @@ A Cython equivalent of above’s C++ example can be written as:
         elif I>3e-9:
             return 100.0
         return (I/1e-9-1)*50
-    
-    
+
     
     # Python script
     
@@ -5674,7 +5372,6 @@ A Cython equivalent of above’s C++ example can be written as:
     @check_units(I=amp, result=Hz)
     def piecewise_linear(I):
         return clip((I-1*nA) * 50*Hz/nA, 0*Hz, 100*Hz)
-    
 
 ---
 
@@ -5733,8 +5430,7 @@ Source: https://brian2.readthedocs.io/en/stable/user/plotting_functions.html
 Models of synapses and neurons are typically composed of a series of functions. To affirm their correct implementation a plot is often helpful.
 
 Consider the following membrane voltage dependent Hodgkin-Huxley equations:
-    
-    
+
     from brian2 import *
     
     VT = -63*mV
@@ -5750,11 +5446,9 @@ Consider the following membrane voltage dependent Hodgkin-Huxley equations:
     tau_m = 1/(alpha_m + beta_m) : second
     tau_h = 1/(alpha_h + beta_h) : second
     """)
-    
 
 We can do the following to plot them as function of membrane voltage:
-    
-    
+
     group = NeuronGroup(100, eq + Equations("v : volt"))
     group.v = np.linspace(-100, 100, len(group))*mV
     
@@ -5764,7 +5458,6 @@ We can do the following to plot them as function of membrane voltage:
     plt.xlabel('membrane voltage / mV')
     plt.ylabel('tau / ms')
     plt.legend()
-    
 
 ![../_images/function_plot.png](../_images/function_plot.png)
 
@@ -5779,36 +5472,27 @@ Source: https://brian2.readthedocs.io/en/stable/user/import.html
 # Importing Brian
 
 After installation, Brian is available in the `brian2` package. By doing a wildcard import from this package, i.e.:
-    
-    
+
     from brian2 import *
-    
 
 you will not only get access to the `brian2` classes and functions, but also to everything in the `pylab` package, which includes the plotting functions from [matplotlib](http://matplotlib.org/) and everything included in numpy/scipy (e.g. functions such as `arange`, `linspace`, etc.). Apart from this when you use the wildcard import, the builtin [`input`](https://docs.python.org/3/library/functions.html#input "\(in Python v3.12\)") function is overshadowed by the [`input`](https://docs.python.org/3/library/functions.html#input "\(in Python v3.12\)") module in the `brian2` package. If you wish to use the builtin [`input`](https://docs.python.org/3/library/functions.html#input "\(in Python v3.12\)") function in your program after importing the brian2 package then you can explicitly import the [`input`](https://docs.python.org/3/library/functions.html#input "\(in Python v3.12\)") function again as shown below:
-    
-    
+
     from brian2 import *
     from builtins import input
-    
 
 The following topics are not essential for beginners.
 
-  
 
 ## Precise control over importing
 
 If you want to use a wildcard import from Brian, but don’t want to import all the additional symbols provided by `pylab` or don’t want to overshadow the builtin [`input`](https://docs.python.org/3/library/functions.html#input "\(in Python v3.12\)") function, you can use:
-    
-    
+
     from brian2.only import *
-    
 
 Note that whenever you use something different from the most general `from brian2 import *` statement, you should be aware that Brian overwrites some numpy functions with their unit-aware equivalents (see [Units](../developer/units.html)). If you combine multiple wildcard imports, the Brian import should therefore be the last import. Similarly, you should not import and call overwritten numpy functions directly, e.g. by using `import numpy as np` followed by `np.sin` since this will not use the unit-aware versions. To make this easier, Brian provides a `brian2.numpy_` package that provides access to everything in numpy but overwrites certain functions. If you prefer to use prefixed names, the recommended way of doing the imports is therefore:
-    
-    
+
     import brian2.numpy_ as np
     import brian2.only as br2
-    
 
 Note that it is safe to use e.g. `np.sin` and `numpy.sin` after a `from brian2 import *`.
 
@@ -5847,13 +5531,11 @@ There are various ways of providing “external” input to a network.
 ## Poisson inputs
 
 For generating spikes according to a Poisson point process, [`PoissonGroup`](../reference/brian2.input.poissongroup.PoissonGroup.html#brian2.input.poissongroup.PoissonGroup "brian2.input.poissongroup.PoissonGroup") can be used, e.g.:
-    
-    
+
     P = PoissonGroup(100, np.arange(100)*Hz + 10*Hz)
     G = NeuronGroup(100, 'dv/dt = -v / (10*ms) : 1')
     S = Synapses(P, G, on_pre='v+=0.1')
     S.connect(j='i')
-    
 
 See More on Poisson inputs below for further information.
 
@@ -5862,16 +5544,13 @@ For simulations where the individually generated spikes are just used as a sourc
 ## Spike generation
 
 You can also generate an explicit list of spikes given via arrays using [`SpikeGeneratorGroup`](../reference/brian2.input.spikegeneratorgroup.SpikeGeneratorGroup.html#brian2.input.spikegeneratorgroup.SpikeGeneratorGroup "brian2.input.spikegeneratorgroup.SpikeGeneratorGroup"). This object behaves just like a [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") in that you can connect it to other groups via a [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") object, but you specify three bits of information: `N` the number of neurons in the group; `indices` an array of the indices of the neurons that will fire; and `times` an array of the same length as `indices` with the times that the neurons will fire a spike. The `indices` and `times` arrays are matching, so for example `indices=[0,2,1]` and `times=[1*ms,2*ms,3*ms]` means that neuron 0 fires at time 1 ms, neuron 2 fires at 2 ms and neuron 1 fires at 3 ms. Example use:
-    
-    
+
     indices = array([0, 2, 1])
     times = array([1, 2, 3])*ms
     G = SpikeGeneratorGroup(3, indices, times)
-    
 
 The spikes that will be generated by [`SpikeGeneratorGroup`](../reference/brian2.input.spikegeneratorgroup.SpikeGeneratorGroup.html#brian2.input.spikegeneratorgroup.SpikeGeneratorGroup "brian2.input.spikegeneratorgroup.SpikeGeneratorGroup") can be changed between runs with the [`set_spikes`](../reference/brian2.input.spikegeneratorgroup.SpikeGeneratorGroup.html#brian2.input.spikegeneratorgroup.SpikeGeneratorGroup.set_spikes "brian2.input.spikegeneratorgroup.SpikeGeneratorGroup.set_spikes") method. This can be useful if the input to a system should depend on its previous output or when running multiple trials with different input:
-    
-    
+
     inp = SpikeGeneratorGroup(N, indices, times)
     G = NeuronGroup(N, '...')
     feedforward = Synapses(inp, G, '...', on_pre='...')
@@ -5884,20 +5563,17 @@ The spikes that will be generated by [`SpikeGeneratorGroup`](../reference/brian2
     # Replay the previous output of group G as input into the group
     inp.set_spikes(spike_mon.i, spike_mon.t + runtime)
     run(runtime)
-    
 
 ## Explicit equations
 
 If the input can be explicitly expressed as a function of time (e.g. a sinusoidal input current), then its description can be directly included in the equations of the respective group:
-    
-    
+
     G = NeuronGroup(100, '''dv/dt = (-v + I)/(10*ms) : 1
                             rates : Hz  # each neuron's input has a different rate
                             size : 1  # and a different amplitude
                             I = size*sin(2*pi*rates*t) : 1''')
     G.rates = '10*Hz + i*Hz'
     G.size = '(100-i)/100. + 0.1'
-    
 
 ## Timed arrays
 
@@ -5906,43 +5582,36 @@ If the time dependence of the input cannot be expressed in the equations in the 
 Note
 
 The semantics of [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray") changed slightly compared to Brian 1: for `TimedArray([x1, x2, ...], dt=my_dt)`, the value `x1` will be returned for all `0<=t<my_dt`, `x2` for `my_dt<=t<2*my_dt` etc., whereas Brian1 returned `x1` for `0<=t<0.5*my_dt`, `x2` for `0.5*my_dt<=t<1.5*my_dt`, etc.
-    
-    
+
     stimulus = TimedArray(np.hstack([[c, c, c, 0, 0]
                                      for c in np.random.rand(1000)]),
                                     dt=10*ms)
     G = NeuronGroup(100, 'dv/dt = (-v + stimulus(t))/(10*ms) : 1',
                     threshold='v>1', reset='v=0')
     G.v = '0.5*rand()'  # different initial values for the neurons
-    
 
 [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray") can take a one-dimensional value array (as above) and therefore return the same value for all neurons or it can take a two-dimensional array with time as the first and (neuron/synapse/…-)index as the second dimension.
 
 In the following, this is used to implement shared noise between neurons, all the “even neurons” get the first noise instantiation, all the “odd neurons” get the second:
-    
-    
+
     runtime = 1*second
     stimulus = TimedArray(np.random.rand(int(runtime/defaultclock.dt), 2),
                           dt=defaultclock.dt)
     G = NeuronGroup(100, 'dv/dt = (-v + stimulus(t, i % 2))/(10*ms) : 1',
                     threshold='v>1', reset='v=0')
-    
 
 ## Regular operations
 
 An alternative to specifying a stimulus in advance is to run explicitly specified code at certain points during a simulation. This can be achieved with [`run_regularly()`](../reference/brian2.groups.group.Group.html#brian2.groups.group.Group.run_regularly "brian2.groups.group.Group.run_regularly"). One can think of these statements as equivalent to reset statements but executed unconditionally (i.e. for all neurons) and possibly on a different clock than the rest of the group. The following code changes the stimulus strength of half of the neurons (randomly chosen) to a new random value every 50ms. Note that the statement uses logical expressions to have the values only updated for the chosen subset of neurons (where the newly introduced auxiliary variable `change` equals 1):
-    
-    
+
     G = NeuronGroup(100, '''dv/dt = (-v + I)/(10*ms) : 1
                             I : 1  # one stimulus per neuron''')
     G.run_regularly('''change = int(rand() < 0.5)
                        I = change*(rand()*2) + (1-change)*I''',
                     dt=50*ms)
-    
 
 The following topics are not essential for beginners.
 
-  
 
 ## More on Poisson inputs
 
@@ -5951,44 +5620,35 @@ The following topics are not essential for beginners.
 `PoissonGroup` takes either a constant rate, an array of rates (one rate per neuron, as in the example above), or a string expression evaluating to a rate as an argument.
 
 If the given value for `rates` is a constant, then using `PoissonGroup(N, rates)` is equivalent to:
-    
-    
+
     NeuronGroup(N, 'rates : Hz', threshold='rand()<rates*dt')
-    
 
 and setting the group’s `rates` attribute.
 
 If `rates` is a string, then this is equivalent to:
-    
-    
+
     NeuronGroup(N, 'rates = ... : Hz', threshold='rand()<rates*dt')
-    
 
 with the respective expression for the rates. This expression will be evaluated at every time step and therefore allows the use of time-dependent rates, i.e. inhomogeneous Poisson processes. For example, the following code (see also Timed arrays) uses a [`TimedArray`](../reference/brian2.input.timedarray.TimedArray.html#brian2.input.timedarray.TimedArray "brian2.input.timedarray.TimedArray") to define the rates of a [`PoissonGroup`](../reference/brian2.input.poissongroup.PoissonGroup.html#brian2.input.poissongroup.PoissonGroup "brian2.input.poissongroup.PoissonGroup") as a function of time, resulting in five 100ms blocks of 100 Hz stimulation, followed by 100ms of silence:
-    
-    
+
     stimulus = TimedArray(np.tile([100., 0.], 5)*Hz, dt=100.*ms)
     P = PoissonGroup(1, rates='stimulus(t)')
-    
 
 Note that, as can be seen in its equivalent [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") formulation, a [`PoissonGroup`](../reference/brian2.input.poissongroup.PoissonGroup.html#brian2.input.poissongroup.PoissonGroup "brian2.input.poissongroup.PoissonGroup") does not work for high rates where more than one spike might fall into a single timestep. Use several units with lower rates in this case (e.g. use `PoissonGroup(10, 1000*Hz)` instead of `PoissonGroup(1, 10000*Hz)`).
 
 ### Efficient Poisson inputs via PoissonInput
 
 For simulations where the [`PoissonGroup`](../reference/brian2.input.poissongroup.PoissonGroup.html#brian2.input.poissongroup.PoissonGroup "brian2.input.poissongroup.PoissonGroup") is just used as a source of input to a neuron (i.e., the individually generated spikes are not important, just their impact on the target cell), the [`PoissonInput`](../reference/brian2.input.poissoninput.PoissonInput.html#brian2.input.poissoninput.PoissonInput "brian2.input.poissoninput.PoissonInput") class provides a more efficient alternative: instead of generating spikes, [`PoissonInput`](../reference/brian2.input.poissoninput.PoissonInput.html#brian2.input.poissoninput.PoissonInput "brian2.input.poissoninput.PoissonInput") directly updates a target variable based on the sum of independent Poisson processes:
-    
-    
+
     G = NeuronGroup(100, 'dv/dt = -v / (10*ms) : 1')
     P = PoissonInput(G, 'v', 100, 100*Hz, weight=0.1)
-    
 
 Each input of the [`PoissonInput`](../reference/brian2.input.poissoninput.PoissonInput.html#brian2.input.poissoninput.PoissonInput "brian2.input.poissoninput.PoissonInput") is connected to all the neurons of the target [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") but each neuron receives independent realizations of the Poisson spike trains. Note that the [`PoissonInput`](../reference/brian2.input.poissoninput.PoissonInput.html#brian2.input.poissoninput.PoissonInput "brian2.input.poissoninput.PoissonInput") class is however more restrictive than [`PoissonGroup`](../reference/brian2.input.poissongroup.PoissonGroup.html#brian2.input.poissongroup.PoissonGroup "brian2.input.poissongroup.PoissonGroup"), it only allows for a constant rate across all neurons (but you can create several [`PoissonInput`](../reference/brian2.input.poissoninput.PoissonInput.html#brian2.input.poissoninput.PoissonInput "brian2.input.poissoninput.PoissonInput") objects, targeting different subgroups). It internally uses [`BinomialFunction`](../reference/brian2.input.binomial.BinomialFunction.html#brian2.input.binomial.BinomialFunction "brian2.input.binomial.BinomialFunction") which will draw a random number each time step, either from a binomial distribution or from a normal distribution as an approximation to the binomial distribution if \\(n p > 5 \wedge n (1 - p) > 5\\) , where \\(n\\) is the number of inputs and \\(p = dt \cdot rate\\) the spiking probability for a single input.
 
 ## Arbitrary Python code (network operations)
 
 If none of the above techniques is general enough to fulfill the requirements of a simulation, Brian allows you to write a [`NetworkOperation`](../reference/brian2.core.operations.NetworkOperation.html#brian2.core.operations.NetworkOperation "brian2.core.operations.NetworkOperation"), an arbitrary Python function that is executed every time step (possible on a different clock than the rest of the simulation). This function can do arbitrary operations, use conditional statements etc. and it will be executed as it is (i.e. as pure Python code even if cython code generation is active). Note that one cannot use network operations in combination with the C++ standalone mode. Network operations are particularly useful when some condition or calculation depends on operations across neurons, which is currently not possible to express in abstract code. The following code switches input on for a randomly chosen single neuron every 50 ms:
-    
-    
+
     G = NeuronGroup(10, '''dv/dt = (-v + active*I)/(10*ms) : 1
                            I = sin(2*pi*100*Hz*t) : 1 (shared) #single input
                            active : 1  # will be set in the network operation''')
@@ -5997,24 +5657,20 @@ If none of the above techniques is general enough to fulfill the requirements of
         index = np.random.randint(10)  # index for the active neuron
         G.active_ = 0  # the underscore switches off unit checking
         G.active_[index] = 1
-    
 
 Note that the network operation (in the above example: `update_active`) has to be included in the [`Network`](../reference/brian2.core.network.Network.html#brian2.core.network.Network "brian2.core.network.Network") object if one is constructed explicitly.
 
 Only functions with zero or one arguments can be used as a [`NetworkOperation`](../reference/brian2.core.operations.NetworkOperation.html#brian2.core.operations.NetworkOperation "brian2.core.operations.NetworkOperation"). If the function has one argument then it will be passed the current time `t`:
-    
-    
+
     @network_operation(dt=1*ms)
     def update_input(t):
         if t>50*ms and t<100*ms:
             pass # do something
-    
 
 Note that this is preferable to accessing `defaultclock.t` from within the function – if the network operation is not running on the [`defaultclock`](../reference/brian2.core.clocks.defaultclock.html#brian2.core.clocks.defaultclock "brian2.core.clocks.defaultclock") itself, then that value is not guaranteed to be correct.
 
 Instance methods can be used as network operations as well, however in this case they have to be constructed explicitly, the [`network_operation()`](../reference/brian2.core.operations.network_operation.html#brian2.core.operations.network_operation "brian2.core.operations.network_operation") decorator cannot be used:
-    
-    
+
     class Simulation(object):
         def __init__(self, data):
             self.data = data
@@ -6027,7 +5683,6 @@ Instance methods can be used as network operations as well, however in this case
     
         def run(self, runtime):
             self.network.run(runtime)
-    
 
 ---
 
@@ -6062,58 +5717,42 @@ If you are relying on Python packages for several, independent projects, we reco
 conda packagePyPI package (`pip`)Ubuntu/Debian packageFedora packageSpack package
 
 We recommend installing Brian into a separate environment, see [conda’s documentation](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) for more details. Brian 2 is not part of the main Anaconda distribution, but built using the community-maintained [conda-forge](https://conda-forge.org/) project. You will therefore have to to install it from the [conda-forge channel](https://anaconda.org/conda-forge). To do so, use:
-    
-    
+
     conda install -c conda-forge brian2
-    
 
 You can also permanently add the channel to your list of channels:
-    
-    
+
     conda config --add channels conda-forge
-    
 
 This has only to be done once. After that, you can install and update the brian2 packages as any other Anaconda package:
-    
-    
+
     conda install brian2
-    
 
 We recommend installing Brian into a separate “virtual environment”, see the [Python Packaging User Guide](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/) for more information. Brian is included in the PyPI package index: <https://pypi.python.org/pypi/Brian2> You can therefore install it with the `pip` utility:
-    
-    
+
     python -m pip install brian2
-    
 
 In rare cases where your current environment does not have access to the `pip` utility, you first have to install `pip` via:
-    
-    
+
     python -m ensurepip
-    
 
 If you are using a recent [Debian](https://debian.org)-based Linux distribution (Debian itself, or one if its derivatives like [Ubuntu](https://ubuntu.com) or [Linux Mint](https://linuxmint.com/)), you can install Brian using its built-in package manager:
-    
-    
+
     sudo apt install python3-brian
-    
 
 Brian releases get packaged by the [Debian Med](https://www.debian.org/devel/debian-med/) team, but note that it might take a while until the most recent version shows up in the repository.
 
 If you are using [Fedora Linux](https://getfedora.org/), you can install Brian using its built-in package manager:
-    
-    
+
     sudo dnf install python-brian2
-    
 
 Brian releases get packaged by the [NeuroFedora](https://docs.fedoraproject.org/en-US/neurofedora/overview/) team, but note that it might take a while until the most recent version shows up in the repository.
 
 [Spack](https://spack.io) is a flexible package manager supporting multiple versions, configurations, platforms, and compilers.
 
 After setting up Spack you can install Brian with the following command:
-    
-    
+
     spack install py-brian2
-    
 
 ## Updating an existing installation
 
@@ -6122,38 +5761,28 @@ How to update Brian to a new version depends on the installation method you used
 conda packagePyPI package (`pip`)Ubuntu/Debian packageFedora package
 
 Depending on whether you added the `conda-forge` channel to the list of channels or not (see above), you either have to include it in the update command again or can leave it away. I.e. use:
-    
-    
+
     conda update -c conda-forge brian2
-    
 
 if you did not add the channel, or:
-    
-    
+
     conda update brian2
-    
 
 if you did.
 
 Use the install command together with the `--upgrade` or `-U` option:
-    
-    
+
     python -m pip install -U brian2
-    
 
 Update the package repository and ask for an install. Note that the package will also be updated automatically with commands like `sudo apt full-upgrade`:
-    
-    
+
     sudo apt update
     sudo apt install python3-brian
-    
 
 Update the package repository (not necessary in general, since it will be updated regularly without asking for it), and ask for an update. Note that the package will also be updated automatically with commands like `sudo dnf upgrade`:
-    
-    
+
     sudo dnf check-update python-brian2
     sudo dnf upgrade python-brian2
-    
 
 ## Requirements for C++ code generation
 
@@ -6180,18 +5809,14 @@ Try running the test suite (see Installing other useful packages below) after th
 When you encounter a problem in Brian, we will sometimes ask you to install Brian’s latest development version, which includes changes that were included after its last release.
 
 We regularly upload the latest development version of Brian to PyPI’s test server. You can install it via:
-    
-    
+
     python -m pip install --upgrade --pre -i https://test.pypi.org/simple/ Brian2
-    
 
 Note that this requires that you already have all of Brian’s dependencies installed.
 
 If you have `git` installed, you can also install directly from github:
-    
-    
+
     python -m pip install git+https://github.com/brian-team/brian2.git
-    
 
 Finally, in particular if you want to either contribute to Brian’s development or regularly test its latest development version, you can directly clone the git repository at github (<https://github.com/brian-team/brian2>) and then run `pip install -e .`, to install Brian in “development mode”. With this installation, updating the git repository is in general enough to keep up with changes in the code, i.e. it is not necessary to install it again.
 
@@ -6200,37 +5825,29 @@ Finally, in particular if you want to either contribute to Brian’s development
 There are various packages that are useful but not necessary for working with Brian. These include: [matplotlib](http://matplotlib.org/) (for plotting), [pytest](https://docs.pytest.org/en/stable/) (for running the test suite), [ipython](http://ipython.org/) and [jupyter](http://jupyter.org/)-notebook (for an interactive console).
 
 conda packagePyPI package (`pip`)
-    
-    
+
     conda install matplotlib pytest ipython notebook
-    
-    
+
     
     python -m pip install matplotlib pytest ipython notebook
-    
 
 You should also have a look at the [brian2tools](https://brian2tools.readthedocs.io) package, which contains several useful functions to visualize Brian 2 simulations and recordings.
 
 conda packagePyPI package (`pip`)
 
 As of now, `brian2tools` is not yet included in the `conda-forge` channel, you therefore have to install it from our own `brian-team` channel:
-    
-    
+
     conda install -c brian-team brian2tools
-    
-    
+
     
     python -m pip install brian2tools
-    
 
 ## Testing Brian
 
 If you have the [pytest](https://docs.pytest.org/en/stable/) testing utility installed, you can run Brian’s test suite:
-    
-    
+
     import brian2
     brian2.test()
-    
 
 It should end with “OK”, showing a number of skipped tests but no errors or failures. For more control about the tests that are run see the [developer documentation on testing](../developer/guidelines/testing.html).
 
@@ -6265,63 +5882,47 @@ Alternatively, you can download a copy of the notebook file to use locally: [`1-
 See the [tutorial overview page](index.html) for more details.
 
 All Brian scripts start with the following. If you’re trying this notebook out in the Jupyter notebook, you should start by running this cell.
-    
-    
+
     from brian2 import *
-    
 
 Later we’ll do some plotting in the notebook, so we activate inline plotting in the notebook by doing this:
-    
-    
+
     %matplotlib inline
-    
 
 If you are not using the Jupyter notebook to run this example (e.g. you are using a standard Python terminal, or you copy&paste these example into an editor and run them as a script), then plots will not automatically be displayed. In this case, call the `show()` command explicitly after the plotting commands.
 
 ## Units system
 
 Brian has a system for using quantities with physical dimensions:
-    
-    
+
     20*volt
-    
 
 \\[20.0\,\mathrm{V}\\]
 
 All of the basic SI units can be used (volt, amp, etc.) along with all the standard prefixes (m=milli, p=pico, etc.), as well as a few special abbreviations like `mV` for millivolt, `pF` for picofarad, etc.
-    
-    
+
     1000*amp
-    
 
 \\[1.0\,\mathrm{k}\,\mathrm{A}\\]
-    
-    
+
     1e6*volt
-    
 
 \\[1.0\,\mathrm{M}\,\mathrm{V}\\]
-    
-    
+
     1000*namp
-    
 
 \\[1.0000000000000002\,\mathrm{\mu}\,\mathrm{A}\\]
 
 Also note that combinations of units with work as expected:
-    
-    
+
     10*nA*5*Mohm
-    
 
 \\[49.99999999999999\,\mathrm{m}\,\mathrm{V}\\]
 
 And if you try to do something wrong like adding amps and volts, what happens?
-    
-    
+
     5*amp+10*volt
-    
-    
+
     
     ---------------------------------------------------------------------------
     
@@ -6329,34 +5930,29 @@ And if you try to do something wrong like adding amps and volts, what happens?
     
     <ipython-input-8-245c0c0332d1> in <module>
     ----> 1 5*amp+10*volt
-    
-    
+
     ~/programming/brian2/brian2/units/fundamentalunits.py in __add__(self, other)
        1429
        1430     def __add__(self, other):
     -> 1431         return self._binary_operation(other, operator.add,
        1432                                       fail_for_mismatch=True,
        1433                                       operator_str='+')
-    
-    
+
     ~/programming/brian2/brian2/units/fundamentalunits.py in _binary_operation(self, other, operation, dim_operation, fail_for_mismatch, operator_str, inplace)
        1369                 message = ('Cannot calculate {value1} %s {value2}, units do not '
        1370                            'match') % operator_str
     -> 1371                 _, other_dim = fail_for_dimension_mismatch(self, other, message,
        1372                                                            value1=self,
        1373                                                            value2=other)
-    
-    
+
     ~/programming/brian2/brian2/units/fundamentalunits.py in fail_for_dimension_mismatch(obj1, obj2, error_message, **error_quantities)
         184             raise DimensionMismatchError(error_message, dim1)
         185         else:
     --> 186             raise DimensionMismatchError(error_message, dim1, dim2)
         187     else:
         188         return dim1, dim2
-    
-    
+
     DimensionMismatchError: Cannot calculate 5. A + 10. V, units do not match (units are A and V).
-    
 
 If you haven’t see an error message in Python before that can look a bit overwhelming, but it’s actually quite simple and it’s important to know how to read these because you’ll probably see them quite often.
 
@@ -6371,34 +5967,28 @@ If you see a traceback, what you want to do is start at the bottom and scan up t
 ## A simple model
 
 Let’s start by defining a simple neuron model. In Brian, all models are defined by systems of differential equations. Here’s a simple example of what that looks like:
-    
-    
+
     tau = 10*ms
     eqs = '''
     dv/dt = (1-v)/tau : 1
     '''
-    
 
 In Python, the notation `'''` is used to begin and end a multi-line string. So the equations are just a string with one line per equation. The equations are formatted with standard mathematical notation, with one addition. At the end of a line you write `: unit` where `unit` is the SI unit of that variable. Note that this is not the unit of the two sides of the equation (which would be `1/second`), but the unit of the _variable_ defined by the equation, i.e. in this case \\(v\\).
 
 Now let’s use this definition to create a neuron.
-    
-    
+
     G = NeuronGroup(1, eqs)
-    
 
 In Brian, you only create groups of neurons, using the class `NeuronGroup`. The first two arguments when you create one of these objects are the number of neurons (in this case, 1) and the defining differential equations.
 
 Let’s see what happens if we didn’t put the variable `tau` in the equation:
-    
-    
+
     eqs = '''
     dv/dt = 1-v : 1
     '''
     G = NeuronGroup(1, eqs)
     run(100*ms)
-    
-    
+
     
     ---------------------------------------------------------------------------
     
@@ -6434,13 +6024,11 @@ Let’s see what happens if we didn’t put the variable `tau` in the equation:
     An error occurred when preparing an object. brian2.units.fundamentalunits.DimensionMismatchError: Inconsistent units in differential equation defining variable v:
     Expression 1-v does not have the expected unit hertz (unit is 1).
     (See above for original error message and traceback.)
-    
 
 An error is raised, but why? The reason is that the differential equation is now dimensionally inconsistent. The left hand side `dv/dt` has units of `1/second` but the right hand side `1-v` is dimensionless. People often find this behaviour of Brian confusing because this sort of equation is very common in mathematics. However, for quantities with physical dimensions it is incorrect because the results would change depending on the unit you measured it in. For time, if you measured it in seconds the same equation would behave differently to how it would if you measured time in milliseconds. To avoid this, we insist that you always specify dimensionally consistent equations.
 
 Now let’s go back to the good equations and actually run the simulation.
-    
-    
+
     start_scope()
     
     tau = 10*ms
@@ -6450,47 +6038,38 @@ Now let’s go back to the good equations and actually run the simulation.
     
     G = NeuronGroup(1, eqs)
     run(100*ms)
-    
-    
+
     
     INFO       No numerical integration method specified for group 'neurongroup', using method 'exact' (took 0.02s). [brian2.stateupdaters.base.method_choice]
-    
 
 First off, ignore that `start_scope()` at the top of the cell. You’ll see that in each cell in this tutorial where we run a simulation. All it does is make sure that any Brian objects created before the function is called aren’t included in the next run of the simulation.
 
 Secondly, you’ll see that there is an “INFO” message about not specifying the numerical integration method. This is harmless and just to let you know what method we chose, but we’ll fix it in the next cell by specifying the method explicitly.
 
 So, what has happened here? Well, the command `run(100*ms)` runs the simulation for 100 ms. We can see that this has worked by printing the value of the variable `v` before and after the simulation.
-    
-    
+
     start_scope()
     
     G = NeuronGroup(1, eqs, method='exact')
     print('Before v = %s' % G.v[0])
     run(100*ms)
     print('After v = %s' % G.v[0])
-    
-    
+
     
     Before v = 0.0
     After v = 0.9999546000702376
-    
 
 By default, all variables start with the value 0. Since the differential equation is `dv/dt=(1-v)/tau` we would expect after a while that `v` would tend towards the value 1, which is just what we see. Specifically, we’d expect `v` to have the value `1-exp(-t/tau)`. Let’s see if that’s right.
-    
-    
+
     print('Expected value of v = %s' % (1-exp(-100*ms/tau)))
-    
-    
+
     
     Expected value of v = 0.9999546000702375
-    
 
 Good news, the simulation gives the value we’d expect!
 
 Now let’s take a look at a graph of how the variable `v` evolves over time.
-    
-    
+
     start_scope()
     
     G = NeuronGroup(1, eqs, method='exact')
@@ -6501,13 +6080,11 @@ Now let’s take a look at a graph of how the variable `v` evolves over time.
     plot(M.t/ms, M.v[0])
     xlabel('Time (ms)')
     ylabel('v');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_31_0.png](../../_images/1-intro-to-brian-neurons_image_31_0.png)
 
 This time we only ran the simulation for 30 ms so that we can see the behaviour better. It looks like it’s behaving as expected, but let’s just check that analytically by plotting the expected behaviour on top.
-    
-    
+
     start_scope()
     
     G = NeuronGroup(1, eqs, method='exact')
@@ -6520,7 +6097,6 @@ This time we only ran the simulation for 30 ms so that we can see the behaviour 
     xlabel('Time (ms)')
     ylabel('v')
     legend();
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_33_0.png](../../_images/1-intro-to-brian-neurons_image_33_0.png)
 
@@ -6529,8 +6105,7 @@ As you can see, the blue (Brian) and dashed orange (analytic solution) lines coi
 In this example, we used the object `StateMonitor` object. This is used to record the values of a neuron variable while the simulation runs. The first two arguments are the group to record from, and the variable you want to record from. We also specify `record=0`. This means that we record all values for neuron 0. We have to specify which neurons we want to record because in large simulations with many neurons it usually uses up too much RAM to record the values of all neurons.
 
 Now try modifying the equations and parameters and see what happens in the cell below.
-    
-    
+
     start_scope()
     
     tau = 10*ms
@@ -6549,15 +6124,13 @@ Now try modifying the equations and parameters and see what happens in the cell 
     plot(M.t/ms, M.v[0])
     xlabel('Time (ms)')
     ylabel('v');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_35_0.png](../../_images/1-intro-to-brian-neurons_image_35_0.png)
 
 ## Adding spikes
 
 So far we haven’t done anything neuronal, just played around with differential equations. Now let’s start adding spiking behaviour.
-    
-    
+
     start_scope()
     
     tau = 10*ms
@@ -6572,15 +6145,13 @@ So far we haven’t done anything neuronal, just played around with differential
     plot(M.t/ms, M.v[0])
     xlabel('Time (ms)')
     ylabel('v');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_37_0.png](../../_images/1-intro-to-brian-neurons_image_37_0.png)
 
 We’ve added two new keywords to the `NeuronGroup` declaration: `threshold='v>0.8'` and `reset='v = 0'`. What this means is that when `v>0.8` we fire a spike, and immediately reset `v = 0` after the spike. We can put any expression and series of statements as these strings.
 
 As you can see, at the beginning the behaviour is the same as before until `v` crosses the threshold `v>0.8` at which point you see it reset to 0. You can’t see it in this figure, but internally Brian has registered this event as a spike. Let’s have a look at that.
-    
-    
+
     start_scope()
     
     G = NeuronGroup(1, eqs, threshold='v>0.8', reset='v = 0', method='exact')
@@ -6590,15 +6161,12 @@ As you can see, at the beginning the behaviour is the same as before until `v` c
     run(50*ms)
     
     print('Spike times: %s' % spikemon.t[:])
-    
-    
+
     
     Spike times: [16.  32.1 48.2] ms
-    
 
 The `SpikeMonitor` object takes the group whose spikes you want to record as its argument and stores the spike times in the variable `t`. Let’s plot those spikes on top of the other figure to see that it’s getting it right.
-    
-    
+
     start_scope()
     
     G = NeuronGroup(1, eqs, threshold='v>0.8', reset='v = 0', method='exact')
@@ -6613,7 +6181,6 @@ The `SpikeMonitor` object takes the group whose spikes you want to record as its
         axvline(t/ms, ls='--', c='C1', lw=3)
     xlabel('Time (ms)')
     ylabel('v');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_41_0.png](../../_images/1-intro-to-brian-neurons_image_41_0.png)
 
@@ -6624,8 +6191,7 @@ Now try changing the strings for `threshold` and `reset` in the cell above to se
 ## Refractoriness
 
 A common feature of neuron models is refractoriness. This means that after the neuron fires a spike it becomes refractory for a certain duration and cannot fire another spike until this period is over. Here’s how we do that in Brian.
-    
-    
+
     start_scope()
     
     tau = 10*ms
@@ -6645,15 +6211,13 @@ A common feature of neuron models is refractoriness. This means that after the n
         axvline(t/ms, ls='--', c='C1', lw=3)
     xlabel('Time (ms)')
     ylabel('v');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_44_0.png](../../_images/1-intro-to-brian-neurons_image_44_0.png)
 
 As you can see in this figure, after the first spike, `v` stays at 0 for around 5 ms before it resumes its normal behaviour. To do this, we’ve done two things. Firstly, we’ve added the keyword `refractory=5*ms` to the `NeuronGroup` declaration. On its own, this only means that the neuron cannot spike in this period (see below), but doesn’t change how `v` behaves. In order to make `v` stay constant during the refractory period, we have to add `(unless refractory)` to the end of the definition of `v` in the differential equations. What this means is that the differential equation determines the behaviour of `v` unless it’s refractory in which case it is switched off.
 
 Here’s what would happen if we didn’t include `(unless refractory)`. Note that we’ve also decreased the value of `tau` and increased the length of the refractory period to make the behaviour clearer.
-    
-    
+
     start_scope()
     
     tau = 5*ms
@@ -6675,11 +6239,9 @@ Here’s what would happen if we didn’t include `(unless refractory)`. Note th
     xlabel('Time (ms)')
     ylabel('v')
     print("Spike times: %s" % spikemon.t[:])
-    
-    
+
     
     Spike times: [ 8. 23. 38.] ms
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_46_1.png](../../_images/1-intro-to-brian-neurons_image_46_1.png)
 
@@ -6690,8 +6252,7 @@ Note that you can do more complicated and interesting things with refractoriness
 ## Multiple neurons
 
 So far we’ve only been working with a single neuron. Let’s do something interesting with multiple neurons.
-    
-    
+
     start_scope()
     
     N = 100
@@ -6710,7 +6271,6 @@ So far we’ve only been working with a single neuron. Let’s do something inte
     plot(spikemon.t/ms, spikemon.i, '.k')
     xlabel('Time (ms)')
     ylabel('Neuron index');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_49_0.png](../../_images/1-intro-to-brian-neurons_image_49_0.png)
 
@@ -6721,8 +6281,7 @@ As well as the variable `spikemon.t` with the times of all the spikes, we’ve a
 ## Parameters
 
 To make these multiple neurons do something more interesting, let’s introduce per-neuron parameters that don’t have a differential equation attached to them.
-    
-    
+
     start_scope()
     
     N = 100
@@ -6751,7 +6310,6 @@ To make these multiple neurons do something more interesting, let’s introduce 
     plot(G.v0, M.count/duration)
     xlabel('v0')
     ylabel('Firing rate (sp/s)');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_52_0.png](../../_images/1-intro-to-brian-neurons_image_52_0.png)
 
@@ -6766,8 +6324,7 @@ Note that in the plot we’ve used the `count` variable of the `SpikeMonitor`: t
 ## Stochastic neurons
 
 Often when making models of neurons, we include a random element to model the effect of various forms of neural noise. In Brian, we can do this by using the symbol `xi` in differential equations. Strictly speaking, this symbol is a “stochastic differential” but you can sort of thinking of it as just a Gaussian random variable with mean 0 and standard deviation 1. We do have to take into account the way stochastic differentials scale with time, which is why we multiply it by `tau**-0.5` in the equations below (see a textbook on stochastic differential equations for more details). Note that we also changed the `method` keyword argument to use `'euler'` (which stands for the [Euler-Maruyama method](https://en.wikipedia.org/wiki/Euler%E2%80%93Maruyama_method)); the `'exact'` method that we used earlier is not applicable to stochastic differential equations.
-    
-    
+
     start_scope()
     
     N = 100
@@ -6797,7 +6354,6 @@ Often when making models of neurons, we include a random element to model the ef
     plot(G.v0, M.count/duration)
     xlabel('v0')
     ylabel('Firing rate (sp/s)');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_55_0.png](../../_images/1-intro-to-brian-neurons_image_55_0.png)
 
@@ -6810,8 +6366,7 @@ That’s the end of this part of the tutorial. The cell below has another exampl
 You could also try out the things you’ve learned in this cell.
 
 Once you’re done with that you can move on to the next tutorial on Synapses.
-    
-    
+
     start_scope()
     
     N = 1000
@@ -6845,7 +6400,6 @@ Once you’re done with that you can move on to the next tutorial on Synapses.
     _ = hist(spikemon.t/ms, 100, histtype='stepfilled', facecolor='k', weights=list(ones(len(spikemon))/(N*defaultclock.dt)))
     xlabel('Time (ms)')
     ylabel('Instantaneous firing rate (sp/s)');
-    
 
 ![../../_images/1-intro-to-brian-neurons_image_58_0.png](../../_images/1-intro-to-brian-neurons_image_58_0.png)
 
@@ -6868,17 +6422,14 @@ See the [tutorial overview page](index.html) for more details.
 If you haven’t yet read part 1: Neurons, go read that now.
 
 As before we start by importing the Brian package and setting up matplotlib for IPython:
-    
-    
+
     from brian2 import *
     %matplotlib inline
-    
 
 ## The simplest Synapse
 
 Once you have some neurons, the next step is to connect them up via synapses. We’ll start out with doing the simplest possible type of synapse that causes an instantaneous change in a variable after a spike.
-    
-    
+
     start_scope()
     
     eqs = '''
@@ -6903,11 +6454,9 @@ Once you have some neurons, the next step is to connect them up via synapses. We
     xlabel('Time (ms)')
     ylabel('v')
     legend();
-    
-    
+
     
     <matplotlib.legend.Legend at 0x7fdccb8773d0>
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_5_1.png](../../_images/2-intro-to-brian-synapses_image_5_1.png)
 
@@ -6920,8 +6469,7 @@ However, at this point we have only defined the synapse model, we haven’t actu
 ## Adding a weight
 
 In the previous section, we hard coded the weight of the synapse to be the value 0.2, but often we would to allow this to be different for different synapses. We do that by introducing synapse equations.
-    
-    
+
     start_scope()
     
     eqs = '''
@@ -6948,11 +6496,9 @@ In the previous section, we hard coded the weight of the synapse to be the value
     xlabel('Time (ms)')
     ylabel('v')
     legend();
-    
-    
+
     
     <matplotlib.legend.Legend at 0x7fdccb7f2750>
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_8_1.png](../../_images/2-intro-to-brian-synapses_image_8_1.png)
 
@@ -6961,8 +6507,7 @@ This example behaves very similarly to the previous example, but now there’s a
 ## Introducing a delay
 
 So far, the synapses have been instantaneous, but we can also make them act with a certain delay.
-    
-    
+
     start_scope()
     
     eqs = '''
@@ -6989,11 +6534,9 @@ So far, the synapses have been instantaneous, but we can also make them act with
     xlabel('Time (ms)')
     ylabel('v')
     legend();
-    
-    
+
     
     <matplotlib.legend.Legend at 0x7fdccb7f2290>
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_11_1.png](../../_images/2-intro-to-brian-synapses_image_11_1.png)
 
@@ -7002,19 +6545,16 @@ As you can see, that’s as simple as adding a line `S.delay = 'j*2*ms'` so that
 ## More complex connectivity
 
 So far, we specified the synaptic connectivity explicitly, but for larger networks this isn’t usually possible. For that, we usually want to specify some condition.
-    
-    
+
     start_scope()
     
     N = 10
     G = NeuronGroup(N, 'v:1')
     S = Synapses(G, G)
     S.connect(condition='i!=j', p=0.2)
-    
 
 Here we’ve created a dummy neuron group of N neurons and a dummy synapses model that doens’t actually do anything just to demonstrate the connectivity. The line `S.connect(condition='i!=j', p=0.2)` will connect all pairs of neurons `i` and `j` with probability 0.2 as long as the condition `i!=j` holds. So, how can we see that connectivity? Here’s a little function that will let us visualise it.
-    
-    
+
     def visualise_connectivity(S):
         Ns = len(S.source)
         Nt = len(S.target)
@@ -7036,15 +6576,13 @@ Here we’ve created a dummy neuron group of N neurons and a dummy synapses mode
         ylabel('Target neuron index')
     
     visualise_connectivity(S)
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_16_0.png](../../_images/2-intro-to-brian-synapses_image_16_0.png)
 
 There are two plots here. On the left hand side, you see a vertical line of circles indicating source neurons on the left, and a vertical line indicating target neurons on the right, and a line between two neurons that have a synapse. On the right hand side is another way of visualising the same thing. Here each black dot is a synapse, with x value the source neuron index, and y value the target neuron index.
 
 Let’s see how these figures change as we change the probability of a connection:
-    
-    
+
     start_scope()
     
     N = 10
@@ -7055,13 +6593,11 @@ Let’s see how these figures change as we change the probability of a connectio
         S.connect(condition='i!=j', p=p)
         visualise_connectivity(S)
         suptitle('p = '+str(p));
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_18_0.png](../../_images/2-intro-to-brian-synapses_image_18_0.png) ![../../_images/2-intro-to-brian-synapses_image_18_1.png](../../_images/2-intro-to-brian-synapses_image_18_1.png) ![../../_images/2-intro-to-brian-synapses_image_18_2.png](../../_images/2-intro-to-brian-synapses_image_18_2.png)
 
 And let’s see what another connectivity condition looks like. This one will only connect neighbouring neurons.
-    
-    
+
     start_scope()
     
     N = 10
@@ -7070,15 +6606,13 @@ And let’s see what another connectivity condition looks like. This one will on
     S = Synapses(G, G)
     S.connect(condition='abs(i-j)<4 and i!=j')
     visualise_connectivity(S)
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_20_0.png](../../_images/2-intro-to-brian-synapses_image_20_0.png)
 
 Try using that cell to see how other connectivity conditions look like.
 
 You can also use the generator syntax to create connections like this more efficiently. In small examples like this, it doesn’t matter, but for large numbers of neurons it can be much more efficient to specify directly which neurons should be connected than to specify just a condition. Note that the following example uses `skip_if_invalid` to avoid errors at the boundaries (e.g. do not try to connect the neuron with index 1 to a neuron with index -2).
-    
-    
+
     start_scope()
     
     N = 10
@@ -7087,13 +6621,11 @@ You can also use the generator syntax to create connections like this more effic
     S = Synapses(G, G)
     S.connect(j='k for k in range(i-3, i+4) if i!=k', skip_if_invalid=True)
     visualise_connectivity(S)
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_23_0.png](../../_images/2-intro-to-brian-synapses_image_23_0.png)
 
 If each source neuron is connected to precisely one target neuron (which would be normally used with two separate groups of the same size, not with identical source and target groups as in this example), there is a special syntax that is extremely efficient. For example, 1-to-1 connectivity looks like this:
-    
-    
+
     start_scope()
     
     N = 10
@@ -7102,13 +6634,11 @@ If each source neuron is connected to precisely one target neuron (which would b
     S = Synapses(G, G)
     S.connect(j='i')
     visualise_connectivity(S)
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_25_0.png](../../_images/2-intro-to-brian-synapses_image_25_0.png)
 
 You can also do things like specifying the value of weights with a string. Let’s see an example where we assign each neuron a spatial location and have a distance-dependent connectivity function. We visualise the weight of a synapse by the size of the marker.
-    
-    
+
     start_scope()
     
     N = 30
@@ -7128,11 +6658,9 @@ You can also do things like specifying the value of weights with a string. Let�
     scatter(S.x_pre/um, S.x_post/um, S.w*20)
     xlabel('Source neuron position (um)')
     ylabel('Target neuron position (um)');
-    
-    
+
     
     Text(0, 0.5, 'Target neuron position (um)')
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_27_1.png](../../_images/2-intro-to-brian-synapses_image_27_1.png)
 
@@ -7151,8 +6679,7 @@ That is, the change in synaptic weight w is the sum over all presynaptic spike t
 \\[\begin{split}W(\Delta t) = \begin{cases} A_{pre} e^{-\Delta t/\tau_{pre}} & \Delta t>0 \\\ A_{post} e^{\Delta t/\tau_{post}} & \Delta t<0 \end{cases}\end{split}\\]
 
 This function looks like this:
-    
-    
+
     tau_pre = tau_post = 20*ms
     A_pre = 0.01
     A_post = -A_pre*1.05
@@ -7162,11 +6689,9 @@ This function looks like this:
     xlabel(r'$\Delta t$ (ms)')
     ylabel('W')
     axhline(0, ls='-', c='k');
-    
-    
+
     
     <matplotlib.lines.Line2D at 0x7fdccb5acdd0>
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_29_1.png](../../_images/2-intro-to-brian-synapses_image_29_1.png)
 
@@ -7187,8 +6712,7 @@ When a postsynaptic spike occurs:
 To see that this formulation is equivalent, you just have to check that the equations sum linearly, and consider two cases: what happens if the presynaptic spike occurs before the postsynaptic spike, and vice versa. Try drawing a picture of it.
 
 Now that we have a formulation that relies only on differential equations and spike events, we can turn that into Brian code.
-    
-    
+
     start_scope()
     
     taupre = taupost = 20*ms
@@ -7213,7 +6737,6 @@ Now that we have a formulation that relies only on differential equations and sp
                  apost += Apost
                  w = clip(w+apre, 0, wmax)
                  ''')
-    
 
 There are a few things to see there. Firstly, when defining the synapses we’ve given a more complicated multi-line string defining three synaptic variables (`w`, `apre` and `apost`). We’ve also got a new bit of syntax there, `(event-driven)` after the definitions of `apre` and `apost`. What this means is that although these two variables evolve continuously over time, Brian should only update them at the time of an event (a spike). This is because we don’t need the values of `apre` and `apost` except at spike times, and it is more efficient to only update them when needed.
 
@@ -7222,8 +6745,7 @@ Next we have a `on_pre=...` argument. The first line is `v_post += w`: this is t
 Finally, we have a `on_post=...` argument. This gives the statements to calculate when a post-synaptic neuron fires. Note that we do not modify `v` in this case, only the synaptic variables.
 
 Now let’s see how all the variables behave when a presynaptic spike arrives some time before a postsynaptic spike.
-    
-    
+
     start_scope()
     
     taupre = taupost = 20*ms
@@ -7262,11 +6784,9 @@ Now let’s see how all the variables behave when a presynaptic spike arrives so
     plot(M.t/ms, M.w[0], label='w')
     legend(loc='best')
     xlabel('Time (ms)');
-    
-    
+
     
     Text(0.5, 0, 'Time (ms)')
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_33_1.png](../../_images/2-intro-to-brian-synapses_image_33_1.png)
 
@@ -7277,8 +6797,7 @@ Secondly, we’ve replaced the `(event-driven)` by `(clock-driven)` so you can s
 Try changing the times of the spikes to see what happens.
 
 Finally, let’s verify that this formulation is equivalent to the original one.
-    
-    
+
     start_scope()
     
     taupre = taupost = 20*ms
@@ -7317,11 +6836,9 @@ Finally, let’s verify that this formulation is equivalent to the original one.
     xlabel(r'$\Delta t$ (ms)')
     ylabel(r'$\Delta w$')
     axhline(0, ls='-', c='k');
-    
-    
+
     
     <matplotlib.lines.Line2D at 0x7fdcc8ae8890>
-    
 
 ![../../_images/2-intro-to-brian-synapses_image_35_1.png](../../_images/2-intro-to-brian-synapses_image_35_1.png)
 
@@ -7350,17 +6867,14 @@ This tutorial is a static non-editable version. You can launch an interactive, e
 Alternatively, you can download a copy of the notebook file to use locally: [`3-intro-to-brian-simulations.ipynb`](../../_downloads/af3f67f9fd5af3c6ed7e83eaaf0ab632/3-intro-to-brian-simulations.ipynb)
 
 See the [tutorial overview page](index.html) for more details.
-    
-    
+
     from brian2 import *
     %matplotlib inline
-    
 
 ## Multiple runs
 
 Let’s start by looking at a very common task: doing multiple runs of a simulation with some parameter that changes. Let’s start off with something very simple, how does the firing rate of a leaky integrate-and-fire neuron driven by Poisson spiking neurons change depending on its membrane time constant? Let’s set that up.
-    
-    
+
     # remember, this is here for running separate simulations in the same notebook
     start_scope()
     # Parameters
@@ -7389,13 +6903,11 @@ Let’s start by looking at a very common task: doing multiple runs of a simulat
     plot(tau_range/ms, output_rates)
     xlabel(r'$\tau$ (ms)')
     ylabel('Firing rate (sp/s)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_4_0.png](../../_images/3-intro-to-brian-simulations_image_4_0.png)
 
 Now if you’re running the notebook, you’ll see that this was a little slow to run. The reason is that for each loop, you’re recreating the objects from scratch. We can improve that by setting up the network just once. We store a copy of the state of the network before the loop, and restore it at the beginning of each iteration.
-    
-    
+
     start_scope()
     num_inputs = 100
     input_rate = 10*Hz
@@ -7422,15 +6934,13 @@ Now if you’re running the notebook, you’ll see that this was a little slow t
     plot(tau_range/ms, output_rates)
     xlabel(r'$\tau$ (ms)')
     ylabel('Firing rate (sp/s)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_6_0.png](../../_images/3-intro-to-brian-simulations_image_6_0.png)
 
 That’s a very simple example of using store and restore, but you can use it in much more complicated situations. For example, you might want to run a long training run, and then run multiple test runs afterwards. Simply put a store after the long training run, and a restore before each testing run.
 
 You can also see that the output curve is very noisy and doesn’t increase monotonically like we’d expect. The noise is coming from the fact that we run the Poisson group afresh each time. If we only wanted to see the effect of the time constant, we could make sure that the spikes were the same each time (although note that really, you ought to do multiple runs and take an average). We do this by running just the Poisson group once, recording its spikes, and then creating a new `SpikeGeneratorGroup` that will output those recorded spikes each time.
-    
-    
+
     start_scope()
     num_inputs = 100
     input_rate = 10*Hz
@@ -7469,7 +6979,6 @@ You can also see that the output curve is very noisy and doesn’t increase mono
     plot(tau_range/ms, output_rates)
     xlabel(r'$\tau$ (ms)')
     ylabel('Firing rate (sp/s)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_8_0.png](../../_images/3-intro-to-brian-simulations_image_8_0.png)
 
@@ -7478,8 +6987,7 @@ You can see that now there is much less noise and it increases monotonically bec
 Note that in the code above, we created `Network` objects. The reason is that in the loop, if we just called `run` it would try to simulate all the objects, including the Poisson neurons `P`, and we only want to run that once. We use `Network` to specify explicitly which objects we want to include.
 
 The techniques we’ve looked at so far are the conceptually most simple way to do multiple runs, but not always the most efficient. Since there’s only a single output neuron in the model above, we can simply duplicate that output neuron and make the time constant a parameter of the group.
-    
-    
+
     start_scope()
     num_inputs = 100
     input_rate = 10*Hz
@@ -7504,19 +7012,16 @@ The techniques we’ve looked at so far are the conceptually most simple way to 
     plot(tau_range/ms, output_rates)
     xlabel(r'$\tau$ (ms)')
     ylabel('Firing rate (sp/s)');
-    
-    
+
     
     WARNING    "tau" is an internal variable of group "neurongroup", but also exists in the run namespace with the value 10. * msecond. The internal variable will be used. [brian2.groups.group.Group.resolve.resolution_conflict]
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_10_1.png](../../_images/3-intro-to-brian-simulations_image_10_1.png)
 
 You can see that this is much faster again! It’s a little bit more complicated conceptually, and it’s not always possible to do this trick, but it can be much more efficient if it’s possible.
 
 Let’s finish with this example by having a quick look at how the mean and standard deviation of the interspike intervals depends on the time constant.
-    
-    
+
     trains = M.spike_trains()
     isi_mu = full(num_tau, nan)*second
     isi_std = full(num_tau, nan)*second
@@ -7528,7 +7033,6 @@ Let’s finish with this example by having a quick look at how the mean and stan
     errorbar(tau_range/ms, isi_mu/ms, yerr=isi_std/ms)
     xlabel(r'$\tau$ (ms)')
     ylabel('Interspike interval (ms)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_12_0.png](../../_images/3-intro-to-brian-simulations_image_12_0.png)
 
@@ -7537,8 +7041,7 @@ Notice that we used the `spike_trains()` method of `SpikeMonitor`. This is a dic
 ## Changing things during a run
 
 Imagine an experiment where you inject current into a neuron, and change the amplitude randomly every 10 ms. Let’s see if we can model that using a Hodgkin-Huxley type neuron.
-    
-    
+
     start_scope()
     # Parameters
     area = 20000*umetre**2
@@ -7578,13 +7081,11 @@ Imagine an experiment where you inject current into a neuron, and change the amp
     plot(spikemon.t/ms, spikemon.v/mV, 'ob')
     xlabel('Time (ms)')
     ylabel('v (mV)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_14_0.png](../../_images/3-intro-to-brian-simulations_image_14_0.png)
 
 In the code above, we used a loop over multiple runs to achieve this. That’s fine, but it’s not the most efficient way to do it because each time we call `run` we have to do a lot of initialisation work that slows everything down. It also won’t work as well with the more efficient standalone mode of Brian. Here’s another way.
-    
-    
+
     start_scope()
     group = NeuronGroup(1, eqs_HH,
                         threshold='v > -40*mV',
@@ -7605,13 +7106,11 @@ In the code above, we used a loop over multiple runs to achieve this. That’s f
     plot(spikemon.t/ms, spikemon.v/mV, 'ob')
     xlabel('Time (ms)')
     ylabel('v (mV)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_16_0.png](../../_images/3-intro-to-brian-simulations_image_16_0.png)
 
 We’ve replaced the loop that had multiple `run` calls with a `run_regularly`. This makes the specified block of code run every `dt=10*ms`. The `run_regularly` lets you run code specific to a single `NeuronGroup`, but sometimes you might need more flexibility. For this, you can use `network_operation` which lets you run arbitrary Python code (but won’t work with the standalone mode).
-    
-    
+
     start_scope()
     group = NeuronGroup(1, eqs_HH,
                         threshold='v > -40*mV',
@@ -7633,13 +7132,11 @@ We’ve replaced the loop that had multiple `run` calls with a `run_regularly`. 
     plot(spikemon.t/ms, spikemon.v/mV, 'ob')
     xlabel('Time (ms)')
     ylabel('v (mV)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_18_0.png](../../_images/3-intro-to-brian-simulations_image_18_0.png)
 
 Now let’s extend this example to run on multiple neurons, each with a different capacitance to see how that affects the behaviour of the cell.
-    
-    
+
     start_scope()
     N = 3
     eqs_HH_2 = '''
@@ -7671,23 +7168,19 @@ Now let’s extend this example to run on multiple neurons, each with a differen
     plot(statemon.t/ms, statemon.v.T/mV, '-')
     xlabel('Time (ms)')
     ylabel('v (mV)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_20_0.png](../../_images/3-intro-to-brian-simulations_image_20_0.png)
 
 So that runs, but something looks wrong! The injected currents look like they’re different for all the different neurons! Let’s check:
-    
-    
+
     plot(statemon.t/ms, statemon.I.T/nA, '-')
     xlabel('Time (ms)')
     ylabel('I (nA)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_22_0.png](../../_images/3-intro-to-brian-simulations_image_22_0.png)
 
 Sure enough, it’s different each time. But why? We wrote `group.run_regularly('I = rand()*50*nA', dt=10*ms)` which seems like it should give the same value of I for each neuron. But, like threshold and reset statements, `run_regularly` code is interpreted as being run separately for each neuron, and because I is a parameter, it can be different for each neuron. We can fix this by making I into a _shared_ variable, meaning it has the same value for each neuron.
-    
-    
+
     start_scope()
     N = 3
     eqs_HH_3 = '''
@@ -7717,7 +7210,6 @@ Sure enough, it’s different each time. But why? We wrote `group.run_regularly(
     plot(statemon.t/ms, statemon.v.T/mV, '-')
     xlabel('Time (ms)')
     ylabel('v (mV)');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_24_0.png](../../_images/3-intro-to-brian-simulations_image_24_0.png)
 
@@ -7726,8 +7218,7 @@ Ahh, that’s more like it!
 ## Adding input
 
 Now let’s think about a neuron being driven by a sinusoidal input. Let’s go back to a leaky integrate-and-fire to simplify the equations a bit.
-    
-    
+
     start_scope()
     A = 2.5
     f = 10*Hz
@@ -7744,13 +7235,11 @@ Now let’s think about a neuron being driven by a sinusoidal input. Let’s go 
     xlabel('Time (ms)')
     ylabel('v')
     legend(loc='best');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_26_0.png](../../_images/3-intro-to-brian-simulations_image_26_0.png)
 
 So far, so good and the sort of thing we saw in the first tutorial. Now, what if that input current were something we had recorded and saved in a file? In that case, we can use `TimedArray`. Let’s start by reproducing the picture above but using `TimedArray`.
-    
-    
+
     start_scope()
     A = 2.5
     f = 10*Hz
@@ -7770,15 +7259,13 @@ So far, so good and the sort of thing we saw in the first tutorial. Now, what if
     xlabel('Time (ms)')
     ylabel('v')
     legend(loc='best');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_28_0.png](../../_images/3-intro-to-brian-simulations_image_28_0.png)
 
 Note that for the example where we put the `sin` function directly in the equations, we had to use the `method='euler'` argument because the exact integrator wouldn’t work here (try it!). However, `TimedArray` is considered to be constant over its time step and so the linear integrator can be used. This means you won’t get the same behaviour from these two methods for two reasons. Firstly, the numerical integration methods `exact` and `euler` give slightly different results. Secondly, `sin` is not constant over a timestep whereas `TimedArray` is.
 
 Now just to show that `TimedArray` works for arbitrary currents, let’s make a weird “recorded” current and run it on that.
-    
-    
+
     start_scope()
     A = 2.5
     f = 10*Hz
@@ -7803,13 +7290,11 @@ Now just to show that `TimedArray` works for arbitrary currents, let’s make a 
     xlabel('Time (ms)')
     ylabel('v')
     legend(loc='best');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_30_0.png](../../_images/3-intro-to-brian-simulations_image_30_0.png)
 
 Finally, let’s finish on an example that actually reads in some data from a file. See if you can work out how this example works.
-    
-    
+
     start_scope()
     from matplotlib.image import imread
     img = (1-imread('brian.png'))[::-1, :, 0].T
@@ -7828,7 +7313,6 @@ Finally, let’s finish on an example that actually reads in some data from a fi
     ylim(0, N)
     xlabel('Time (ms)')
     ylabel('Neuron index');
-    
 
 ![../../_images/3-intro-to-brian-simulations_image_32_0.png](../../_images/3-intro-to-brian-simulations_image_32_0.png)
 
@@ -7843,27 +7327,22 @@ Source: https://brian2.readthedocs.io/en/stable/advanced/logging.html
 Brian uses a logging system to display warnings and general information messages to the user, as well as writing them to a file with more detailed information, useful for debugging. Each log message has one of the following “log levels”:
 
 `ERROR`
-    
 
 Only used when an exception is raised, i.e. an error occurs and the current operation is interrupted. _Example:_ You use a variable name in an equation that Brian does not recognize.
 
 `WARNING`
-    
 
 Brian thinks that something is most likely a bug, but it cannot be sure. _Example:_ You use a [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") object without any synapses in your simulation.
 
 `INFO`
-    
 
 Brian wants to make the user aware of some automatic choice that it did for the user. _Example:_ You did not specify an integration `method` for a [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") and therefore Brian chose an appropriate method for you.
 
 `DEBUG`
-    
 
 Additional information that might be useful when a simulation is not working as expected. _Example:_ The integration timestep used during the simulation.
 
 `DIAGNOSTIC`
-    
 
 Additional information useful when tracking down bugs in Brian itself. _Example:_ The generated code for a `CodeObject`.
 
@@ -7882,27 +7361,21 @@ To avoid issues when multiple processes try to log to the same log file, file lo
 ## Showing/hiding log messages
 
 If you want to change what messages are displayed on the console, you can call a method of the method of [`BrianLogger`](../reference/brian2.utils.logger.BrianLogger.html#brian2.utils.logger.BrianLogger "brian2.utils.logger.BrianLogger"):
-    
-    
+
     BrianLogger.log_level_debug() # now also display debug messages
-    
 
 It is also possible to suppress messages for certain sub-hierarchies by using [`BrianLogger.suppress_hierarchy`](../reference/brian2.utils.logger.BrianLogger.html#brian2.utils.logger.BrianLogger.suppress_hierarchy "brian2.utils.logger.BrianLogger.suppress_hierarchy"):
-    
-    
+
     # Suppress code generation messages on the console
     BrianLogger.suppress_hierarchy('brian2.codegen')
     # Suppress preference messages even in the log file
     BrianLogger.suppress_hierarchy('brian2.core.preferences',
                                    filter_log_file=True)
-    
 
 Similarly, messages ending in a certain name can be suppressed with [`BrianLogger.suppress_name`](../reference/brian2.utils.logger.BrianLogger.html#brian2.utils.logger.BrianLogger.suppress_name "brian2.utils.logger.BrianLogger.suppress_name"):
-    
-    
+
     # Suppress resolution conflict warnings
     BrianLogger.suppress_name('resolution_conflict')
-    
 
 These functions should be used with care, as they suppresses messages independent of the level, i.e. even warning and error messages.
 
@@ -7951,43 +7424,33 @@ See the document [Neural models (Brian 1 –> 2 conversion)](../introduction/bri
 ## Model equations
 
 The core of every simulation is a [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"), a group of neurons that share the same equations defining their properties. The minimum [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") specification contains the number of neurons and the model description in the form of equations:
-    
-    
+
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) : volt')
-    
 
 This defines a group of 10 leaky integrators. The model description can be directly given as a (possibly multi-line) string as above, or as an [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.equations.equations.Equations "brian2.equations.equations.Equations") object. For more details on the form of equations, see [Equations](equations.html). Brian needs the model to be given in the form of differential equations, but you might see the integrated form of synapses in some textbooks and papers. See [Converting from integrated form to ODEs](converting_from_integrated_form.html) for details on how to convert between these representations.
 
 Note that model descriptions can make reference to physical units, but also to scalar variables declared outside of the model description itself:
-    
-    
+
     tau = 10*ms
     G = NeuronGroup(10, 'dv/dt = -v/tau : volt')
-    
 
 If a variable should be taken as a _parameter_ of the neurons, i.e. if it should be possible to vary its value across neurons, it has to be declared as part of the model description:
-    
-    
+
     G = NeuronGroup(10, '''dv/dt = -v/tau : volt
                            tau : second''')
-    
 
 To make complex model descriptions more readable, named subexpressions can be used:
-    
-    
+
     G = NeuronGroup(10, '''dv/dt = I_leak / Cm : volt
                            I_leak = g_L*(E_L - v) : amp''')
-    
 
 For a list of some standard model equations, see [Neural models (Brian 1 –> 2 conversion)](../introduction/brian1_to_2/neurongroup.html).
 
 ## Noise
 
 In addition to ordinary differential equations, Brian allows you to introduce random noise by specifying a [stochastic differential equation](https://en.wikipedia.org/wiki/Stochastic_differential_equation). Brian uses the physicists’ notation used in the [Langevin equation](https://en.wikipedia.org/wiki/Langevin_equation), representing the “noise” as a term \\(\xi(t)\\), rather than the mathematicians’ stochastic differential \\(\mathrm{d}W_t\\). The following is an example of the [Ornstein-Uhlenbeck process](http://www.scholarpedia.org/article/Stochastic_dynamical_systems#Ornstein-Uhlenbeck_process) that is often used to model a leaky integrate-and-fire neuron with a stochastic current:
-    
-    
+
     G = NeuronGroup(10, 'dv/dt = -v/tau + sigma*sqrt(2/tau)*xi : volt')
-    
 
 You can start by thinking of `xi` as just a Gaussian random variable with mean 0 and standard deviation 1. However, it scales in an unusual way with time and this gives it units of `1/sqrt(second)`. You don’t necessarily need to understand why this is, but it is possible to get a reasonably simple intuition for it by thinking about numerical integration: see below.
 
@@ -7998,32 +7461,26 @@ If you want to use noise in more than one equation of a [`NeuronGroup`](../refer
 ## Threshold and reset
 
 To emit spikes, neurons need a _threshold_. Threshold and reset are given as strings in the [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") constructor:
-    
-    
+
     tau = 10*ms
     G = NeuronGroup(10, 'dv/dt = -v/tau : volt', threshold='v > -50*mV',
                     reset='v = -70*mV')
-    
 
 Whenever the threshold condition is fulfilled, the reset statements will be executed. Again, both threshold and reset can refer to physical units, external variables and parameters, in the same way as model descriptions:
-    
-    
+
     v_r = -70*mV  # reset potential
     G = NeuronGroup(10, '''dv/dt = -v/tau : volt
                            v_th : volt  # neuron-specific threshold''',
                     threshold='v > v_th', reset='v = v_r')
-    
 
 You can also create non-spike events. See [Custom events](../advanced/custom_events.html) for more details.
 
 ## Refractoriness
 
 To make a neuron non-excitable for a certain time period after a spike, the refractory keyword can be used:
-    
-    
+
     G = NeuronGroup(10, 'dv/dt = -v/tau : volt', threshold='v > -50*mV',
                     reset='v = -70*mV', refractory=5*ms)
-    
 
 This will not allow any threshold crossing for a neuron for 5ms after a spike. The refractory keyword allows for more flexible refractoriness specifications, see [Refractoriness](refractoriness.html) for details.
 
@@ -8032,18 +7489,15 @@ This will not allow any threshold crossing for a neuron for 5ms after a spike. T
 Differential equations and parameters in model descriptions are stored as _state variables_ of the [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"). In addition to these variables, Brian also defines two variables automatically:
 
 `i`
-    
 
 The index of a neuron.
 
 `N`
-    
 
 The total number of neurons.
 
 All state variables can be accessed and set as an attribute of the group. To get the values without physical units (e.g. for analysing data with external tools), use an underscore after the name:
-    
-    
+
     >>> G = NeuronGroup(10, '''dv/dt = -v/tau : volt
     ...                        tau : second''', name='neurons')
     >>> G.v = -70*mV
@@ -8051,29 +7505,23 @@ All state variables can be accessed and set as an attribute of the group. To get
     <neurons.v: array([-70., -70., -70., -70., -70., -70., -70., -70., -70., -70.]) * mvolt>
     >>> G.v_  # values without units
     <neurons.v_: array([-0.07, -0.07, -0.07, -0.07, -0.07, -0.07, -0.07, -0.07, -0.07, -0.07])>
-    
 
 The value of state variables can also be set using string expressions that can refer to units and external variables, other state variables or mathematical functions:
-    
-    
+
     >>> G.tau = '5*ms + (1.0*i/N)*5*ms'
     >>> G.tau
     <neurons.tau: array([ 5. ,  5.5,  6. ,  6.5,  7. ,  7.5,  8. ,  8.5,  9. ,  9.5]) * msecond>
-    
 
 You can also set the value only if a condition holds, for example:
-    
-    
+
     >>> G.v['tau>7.25*ms'] = -60*mV
     >>> G.v
     <neurons.v: array([-70., -70., -70., -70., -70., -60., -60., -60., -60., -60.]) * mvolt>
-    
 
 ## Subgroups
 
 It is often useful to refer to a subset of neurons, this can be achieved using Python’s slicing syntax:
-    
-    
+
     G = NeuronGroup(10, '''dv/dt = -v/tau : volt
                            tau : second''',
                     threshold='v > -50*mV',
@@ -8085,7 +7533,6 @@ It is often useful to refer to a subset of neurons, this can be achieved using P
     # This will set the values in the main group, subgroups are just "views"
     G1.tau = 10*ms
     G2.tau = 20*ms
-    
 
 Here `G1` refers to the first 5 neurons in G, and `G2` to the second 5 neurons. In general `G[i:j]` refers to the neurons with indices from `i` to `j-1`, as in general in Python.
 
@@ -8095,35 +7542,29 @@ Subgroups can be used in most places where regular groups are used, e.g. their s
 
 The following topics are not essential for beginners.
 
-  
 
 ## Shared variables
 
 Sometimes it can also be useful to introduce shared variables or subexpressions, i.e. variables that have a common value for all neurons. In contrast to external variables (such as `Cm` above), such variables can change during a run, e.g. by using [`run_regularly()`](../reference/brian2.groups.group.Group.html#brian2.groups.group.Group.run_regularly "brian2.groups.group.Group.run_regularly"). This can be for example used for an external stimulus that changes in the course of a run:
-    
-    
+
     >>> G = NeuronGroup(10, '''shared_input : volt (shared)
     ...                        dv/dt = (-v + shared_input)/tau : volt
     ...                        tau : second''', name='neurons')
-    
 
 Note that there are several restrictions around the use of shared variables: they cannot be written to in contexts where statements apply only to a subset of neurons (e.g. reset statements, see below). If a code block mixes statements writing to shared and vector variables, then the shared statements have to come first.
 
 By default, subexpressions are re-evaluated whenever they are used, i.e. using a subexpression is completely equivalent to substituting it. Sometimes it is useful to instead only evaluate a subexpression once and then use this value for the rest of the time step. This can be achieved by using the `(constant over dt)` flag. This flag is mandatory for subexpressions that refer to stateful functions like `rand()` which notably allows them to be recorded with a [`StateMonitor`](../reference/brian2.monitors.statemonitor.StateMonitor.html#brian2.monitors.statemonitor.StateMonitor "brian2.monitors.statemonitor.StateMonitor") – otherwise the monitor would record a different instance of the random number than the one that was used in the equations.
 
 For shared variables, setting by string expressions can only refer to shared values:
-    
-    
+
     >>> G.shared_input = '(4.0/N)*mV'
     >>> G.shared_input
     <neurons.shared_input: 0.4 * mvolt>
-    
 
 ## Storing state variables
 
 Sometimes it can be convenient to access multiple state variables at once, e.g. to set initial values from a dictionary of values or to store all the values of a group on disk. This can be done with the [`get_states()`](../reference/brian2.groups.group.VariableOwner.html#brian2.groups.group.VariableOwner.get_states "brian2.groups.group.VariableOwner.get_states") and [`set_states()`](../reference/brian2.groups.group.VariableOwner.html#brian2.groups.group.VariableOwner.set_states "brian2.groups.group.VariableOwner.set_states") methods:
-    
-    
+
     >>> group = NeuronGroup(5, '''dv/dt = -v/tau : 1
     ...                           tau : second''', name='neurons')
     >>> initial_values = {'v': [0, 1, 2, 3, 4],
@@ -8136,11 +7577,9 @@ Sometimes it can be convenient to access multiple state variables at once, e.g. 
     >>> states = group.get_states()
     >>> states['v']
     array([ 0.,  1.,  2.,  3.,  4.])
-    
 
 The data (without physical units) can also be exported/imported to/from [Pandas](http://pandas.pydata.org/) data frames (needs an installation of `pandas`):
-    
-    
+
     >>> df = group.get_states(units=False, format='pandas')  
     >>> df  
        N      dt  i    t   tau    v
@@ -8160,23 +7599,19 @@ The data (without physical units) can also be exported/imported to/from [Pandas]
     >>> group.set_states(df[['tau']], units=False, format='pandas')  
     >>> group.tau  
     <neurons.tau: array([ 20.,  40.,  20.,  40.,  20.]) * msecond>
-    
 
 ## Linked variables
 
 A [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") can define parameters that are not stored in this group, but are instead a reference to a state variable in another group. For this, a group defines a parameter as `linked` and then uses [`linked_var()`](../reference/brian2.core.variables.linked_var.html#brian2.core.variables.linked_var "brian2.core.variables.linked_var") to specify the linking. This can for example be useful to model shared noise between cells:
-    
-    
+
     inp = NeuronGroup(1, 'dnoise/dt = -noise/tau + tau**-0.5*xi : 1')
     
     neurons = NeuronGroup(100, '''noise : 1 (linked)
                                   dv/dt = (-v + noise_strength*noise)/tau : volt''')
     neurons.noise = linked_var(inp, 'noise')
-    
 
 If the two groups have the same size, the linking will be done in a 1-to-1 fashion. If the source group has the size one (as in the above example) or if the source parameter is a shared variable, then the linking will be done as 1-to-all. In all other cases, you have to specify the indices to use for the linking explicitly:
-    
-    
+
     # two inputs with different phases
     inp = NeuronGroup(2, '''phase : 1
                             dx/dt = 1*mV/ms*sin(2*pi*100*Hz*t-phase) : volt''')
@@ -8186,7 +7621,6 @@ If the two groups have the same size, the linking will be done in a 1-to-1 fashi
                                   dv/dt = (-v + inp) / tau : volt''')
     # Half of the cells get the first input, other half gets the second
     neurons.inp = linked_var(inp, 'x', index=repeat([0, 1], 50))
-    
 
 ## Time scaling of noise
 
@@ -8225,76 +7659,60 @@ All the simulations performed with the C++ standalone mode can be launched with 
 ## Use of `#pragma` flags
 
 In OpenMP, all the parallelism is handled thanks to extra comments, added in the main C++ code, under the form:
-    
-    
+
     #pragma omp ...
-    
 
 But to avoid any dependencies in the code that is generated by Brian when OpenMP is not activated, we are using functions that will only add those comments, during code generation, when such a multi-threading mode is turned on. By default, nothing will be inserted.
 
 ### Translations of the `#pragma` commands
 
 All the translations from `openmp_pragma()` calls in the C++ templates are handled in the file `devices/cpp_standalone/codeobject.py` In this function, you can see that all calls with various string inputs will generate #pragma statements inserted into the C++ templates during code generation. For example:
-    
-    
+
     {{ openmp_pragma('static') }}
-    
 
 will be transformed, during code generation, into:
-    
-    
+
     #pragma omp for schedule(static)
-    
 
 You can find the list of all the translations in the core of the `openmp_pragma()` function, and if some extra translations are needed, they should be added here.
 
 ### Execution of the OpenMP code
 
 In this section, we are explaining the main ideas behind the OpenMP mode of Brian, and how the simulation is executed in such a parallel context. As can be seen in `devices/cpp_standalone/templates/main.cpp`, the appropriate number of threads, defined by the user, is fixed at the beginning of the main function in the C++ code with:
-    
-    
+
     {{ openmp_pragma('set_num_threads') }}
-    
 
 equivalent to (thanks to the `openmp_pragam()` function defined above): nothing if OpenMP is turned off (default), and to:
-    
-    
+
     omp_set_dynamic(0);
     omp_set_num_threads(nb_threads);
-    
 
 otherwise. When OpenMP creates a parallel context, this is the number of threads that will be used. As said, network creation is performed without any calls to OpenMP, on one single thread. Each template that wants to use parallelism has to add `{{ openmp_pragma{('parallel')}}` to create a general block that will be executed in parallel or `{{ openmp_pragma{('parallel-static')}}` to execute a single loop in parallel.
 
 ## How to make your template use OpenMP parallelism
 
 To design a parallel template, such as for example `devices/cpp_standalone/templates/common_group.cpp`, you can see that as soon as you have loops that can safely be split across nodes, you just need to add an openmp command in front of those loops:
-    
-    
+
     {{openmp_pragma('parallel-static')}}
     for(int _idx=0; _idx<N; _idx++)
     {
         ...
     }
-    
 
 By doing so, OpenMP will take care of splitting the indices and each thread will loop only on a subset of indices, sharing the load. By default, the scheduling use for splitting the indices is static, meaning that each node will get the same number of indices: this is the faster scheduling in OpenMP, and it makes sense for [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") or [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") because operations are the same for all indices. By having a look at examples of templates such as `devices/cpp_standalone/templates/statemonitor.cpp`, you can see that you can merge portions of code executed by only one node and portions executed in parallel. In this template, for example, only one node is recording the time and extending the size of the arrays to store the recorded values:
-    
-    
+
     {{_dynamic_t}}.push_back(_clock_t);
     
     // Resize the dynamic arrays
     {{_recorded}}.resize(_new_size, _num_indices);
-    
 
 But then, values are written in the arrays by all the nodes:
-    
-    
+
     {{ openmp_pragma('parallel-static') }}
     for (int _i = 0; _i < _num_indices; _i++)
     {
         ....
     }
-    
 
 In general, operations that manipulate global data structures, e.g. that use `push_back` for a `std::vector`, should only be executed by a single thread.
 
@@ -8303,27 +7721,22 @@ In general, operations that manipulate global data structures, e.g. that use `pu
 ### General ideas
 
 With OpenMP, synaptic propagation is also multi-threaded. Therefore, we have to modify the `SynapticPathway` objects, handling spike propagation. As can be seen in `devices/cpp_standalone/templates/synapses_classes.cpp`, such an object, created during run time, will be able to get the number of threads decided by the user:
-    
-    
+
     _nb_threads = {{ openmp_pragma('get_num_threads') }};
-    
 
 By doing so, a `SynapticPathway`, instead of handling only one `SpikeQueue`, will be divided into `_nb_threads` `SpikeQueue`s, each of them handling a subset of the total number of connections. All the calls to `SynapticPathway` object are performed from within `parallel` blocks in the `synapses` and `synapses_push_spikes` template, we have to take this parallel context into account. This is why all the function of the `SynapticPathway` object are taking care of the node number:
-    
-    
+
     void push(int *spikes, unsigned int nspikes)
     {
         queue[{{ openmp_pragma('get_thread_num') }}]->push(spikes, nspikes);
     }
-    
 
 Such a method for the `SynapticPathway` will make sure that when spikes are propagated, all the threads will propagate them to their connections. By default, again, if OpenMP is turned off, the queue vector has size 1.
 
 ### Preparation of the `SynapticPathway`
 
 Here we are explaining the implementation of the `prepare()` method for `SynapticPathway`:
-    
-    
+
     {{ openmp_pragma('parallel') }}
     {
         unsigned int length;
@@ -8337,15 +7750,13 @@ Here we are explaining the implementation of the `prepare()` method for `Synapti
         queue[{{ openmp_pragma('get_thread_num') }}]->openmp_padding = padding;
         queue[{{ openmp_pragma('get_thread_num') }}]->prepare(&real_delays[padding], &sources[padding], length, _dt);
     }
-    
 
 Basically, each threads is getting an equal number of synapses (except the last one, that will get the remaining ones, if the number is not a multiple of `n_threads`), and the queues are receiving a padding integer telling them what part of the synapses belongs to each queue. After that, the parallel context is destroyed, and network creation can continue. Note that this could have been done without a parallel context, in a sequential manner, but this is just speeding up everything.
 
 ### Selection of the spikes
 
 Here we are explaining the implementation of the `peek()` method for `SynapticPathway`. This is an example of concurrent access to data structures that are not well handled in parallel, such as `std::vector`. When `peek()` is called, we need to return a vector of all the neuron spiking at that particular time. Therefore, we need to ask every queue of the `SynapticPathway` what are the id of the spiking neurons, and concatenate them. Because those ids are stored in vectors with various shapes, we need to loop over nodes to perform this concatenate, in a sequential manner:
-    
-    
+
     {{ openmp_pragma('static-ordered') }}
     for(int _thread=0; _thread < {{ openmp_pragma('get_num_threads') }}; _thread++)
     {
@@ -8356,23 +7767,18 @@ Here we are explaining the implementation of the `peek()` method for `SynapticPa
             all_peek.insert(all_peek.end(), queue[_thread]->peek()->begin(), queue[_thread]->peek()->end());
         }
     }
-    
 
 The loop, with the keyword ‘static-ordered’, is therefore performed such that node 0 enters it first, then node 1, and so on. Only one node at a time is executing the block statement. This is needed because vector manipulations can not be performed in a multi-threaded manner. At the end of the loop, `all_peek` is now a vector where all sub queues have written the id of spiking cells, and therefore this is the list of all spiking cells within the `SynapticPathway`.
 
 ## Compilation of the code
 
 One extra file needs to be modified, in order for OpenMP implementation to work. This is the makefile `devices/cpp_standalone/templates/makefile`. As one can simply see, the CFLAGS are dynamically modified during code generation thanks to:
-    
-    
+
     {{ openmp_pragma('compilation') }}
-    
 
 If OpenMP is activated, this will add the following dependencies:
-    
-    
+
     -fopenmp
-    
 
 such that if OpenMP is turned off, nothing, in the generated code, does depend on it.
 
@@ -8397,19 +7803,15 @@ A [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuro
 ### Schematic morphologies
 
 Morphologies can be created combining geometrical objects:
-    
-    
+
     soma = Soma(diameter=30*um)
     cylinder = Cylinder(diameter=1*um, length=100*um, n=10)
-    
 
 The first statement creates a single iso-potential compartment (i.e. with no axial resistance within the compartment), with its area calculated as the area of a sphere with the given diameter. The second one specifies a cylinder consisting of 10 compartments with identical diameter and the given total length.
 
 For more precise control over the geometry, you can specify the length and diameter of each individual compartment, including the diameter at the start of the section (i.e. for `n` compartments: `n` length and `n+1` diameter values) in a [`Section`](../reference/brian2.spatialneuron.morphology.Section.html#brian2.spatialneuron.morphology.Section "brian2.spatialneuron.morphology.Section") object:
-    
-    
+
     section = Section(diameter=[6, 5, 4, 3, 2, 1]*um, length=[10, 10, 10, 5, 5]*um, n=5)
-    
 
 The individual compartments are modeled as truncated cones, changing the diameter linearly between the given diameters over the length of the compartment. Note that the `diameter` argument specifies the values at the nodes _between_ the compartments, but accessing the `diameter` attribute of a [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") object will return the diameter at the _center_ of the compartment (see the note below).
 
@@ -8449,38 +7851,29 @@ Note
 For a [`Section`](../reference/brian2.spatialneuron.morphology.Section.html#brian2.spatialneuron.morphology.Section "brian2.spatialneuron.morphology.Section"), the `diameter` argument specifies the diameter _between_ the compartments (and at the beginning/end of the first/last compartment). the corresponding values can therefore be later retrieved from the [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") via the `start_diameter` and `end_diameter` attributes. The `diameter` attribute of a [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") does correspond to the diameter at the midpoint of the compartment. For a [`Cylinder`](../reference/brian2.spatialneuron.morphology.Cylinder.html#brian2.spatialneuron.morphology.Cylinder "brian2.spatialneuron.morphology.Cylinder"), `start_diameter`, `diameter`, and `end_diameter` are of course all identical.
 
 The tree structure of a morphology is created by attaching [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") objects together:
-    
-    
+
     morpho = Soma(diameter=30*um)
     morpho.axon = Cylinder(length=100*um, diameter=1*um, n=10)
     morpho.dendrite = Cylinder(length=50*um, diameter=2*um, n=5)
-    
 
 These statements create a morphology consisting of a cylindrical axon and a dendrite attached to a spherical soma. Note that the names `axon` and `dendrite` are arbitrary and chosen by the user. For example, the same morphology can be created as follows:
-    
-    
+
     morpho = Soma(diameter=30*um)
     morpho.output_process = Cylinder(length=100*um, diameter=1*um, n=10)
     morpho.input_process = Cylinder(length=50*um, diameter=2*um, n=5)
-    
 
 The syntax is recursive, for example two sections can be added at the end of the dendrite as follows:
-    
-    
+
     morpho.dendrite.branch1 = Cylinder(length=50*um, diameter=1*um, n=3)
     morpho.dendrite.branch2 = Cylinder(length=50*um, diameter=1*um, n=3)
-    
 
 Equivalently, one can use an indexing syntax:
-    
-    
+
     morpho['dendrite']['branch1'] = Cylinder(length=50*um, diameter=1*um, n=3)
     morpho['dendrite']['branch2'] = Cylinder(length=50*um, diameter=1*um, n=3)
-    
 
 The names given to sections are completely up to the user. However, names that consist of a single digit (`1` to `9`) or the letters `L` (for left) and `R` (for right) allow for a special short syntax: they can be joined together directly, without the needs for dots (or dictionary syntax) and therefore allow to quickly navigate through the morphology tree (e.g. `morpho.LRLLR` is equivalent to `morpho.L.R.L.L.R`). This short syntax can also be used to create trees:
-    
-    
+
     >>> morpho = Soma(diameter=30*um)
     >>> morpho.L = Cylinder(length=10*um, diameter=1*um, n=3)
     >>> morpho.L1 = Cylinder(length=5*um, diameter=1*um, n=3)
@@ -8489,11 +7882,9 @@ The names given to sections are completely up to the user. However, names that c
     >>> morpho.R = Cylinder(length=10*um, diameter=1*um, n=3)
     >>> morpho.RL = Cylinder(length=5*um, diameter=1*um, n=3)
     >>> morpho.RR = Cylinder(length=5*um, diameter=1*um, n=3)
-    
 
 The above instructions create a dendritic tree with two main sections, three sections attached to the first section and two to the second. This can be verified with the [`Morphology.topology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology.topology "brian2.spatialneuron.morphology.Morphology.topology") method:
-    
-    
+
     >>> morpho.topology()  
     ( )  [root]
        `---|  .L
@@ -8503,7 +7894,6 @@ The above instructions create a dendritic tree with two main sections, three sec
        `---|  .R
             `---|  .R.L
             `---|  .R.R
-    
 
 Note that an expression such as `morpho.L` will always refer to the entire subtree. However, accessing the attributes (e.g. `diameter`) will only return the values for the given section.
 
@@ -8516,18 +7906,14 @@ The number of compartments in a section can be accessed with `morpho.n` (or `mor
 #### Adding coordinates
 
 For plotting purposes, it can be useful to add coordinates to a [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") that was created using the “schematic” approach described above. This can be done by calling the `generate_coordinates` method on a morphology, which will return an identical morphology but with additional 2D or 3D coordinates. By default, this method creates a morphology according to a deterministic algorithm in 2D:
-    
-    
+
     new_morpho = morpho.generate_coordinates()
-    
 
 ![../_images/morphology_deterministic_coords.png](../_images/morphology_deterministic_coords.png)
 
 To get more “realistic” morphologies, this function can also be used to create morphologies in 3D where the orientation of each section differs from the orientation of the parent section by a random amount:
-    
-    
+
     new_morpho = morpho.generate_coordinates(section_randomness=25)
-    
 
 ![../_images/morphology_random_section_1.png](../_images/morphology_random_section_1.png) | ![../_images/morphology_random_section_2.png](../_images/morphology_random_section_2.png) | ![../_images/morphology_random_section_3.png](../_images/morphology_random_section_3.png)  
 ---|---|---  
@@ -8535,11 +7921,9 @@ To get more “realistic” morphologies, this function can also be used to crea
 This algorithm will base the orientation of each section on the orientation of the parent section and then randomly perturb this orientation. More precisely, the algorithm first chooses a random vector orthogonal to the orientation of the parent section. Then, the section will be rotated around this orthogonal vector by a random angle, drawn from an exponential distribution with the \\(\beta\\) parameter (in degrees) given by `section_randomness`. This \\(\beta\\) parameter specifies both the mean and the standard deviation of the rotation angle. Note that no maximum rotation angle is enforced, values for `section_randomness` should therefore be reasonably small (e.g. using a `section_randomness` of `45` would already lead to a probability of ~14% that the section will be rotated by more than 90 degrees, therefore making the section go “backwards”).
 
 In addition, also the orientation of each compartment within a section can be randomly varied:
-    
-    
+
     new_morpho = morpho.generate_coordinates(section_randomness=25,
                                              compartment_randomness=15)
-    
 
 ![../_images/morphology_random_section_compartment_1.png](../_images/morphology_random_section_compartment_1.png) | ![../_images/morphology_random_section_compartment_2.png](../_images/morphology_random_section_compartment_2.png) | ![../_images/morphology_random_section_compartment_3.png](../_images/morphology_random_section_compartment_3.png)  
 ---|---|---  
@@ -8549,18 +7933,15 @@ The algorithm is the same as the one presented above, but applied individually t
 ### Complex morphologies
 
 Morphologies can also be created from information about the compartment coordinates in 3D space. Such morphologies can be loaded from a `.swc` file (a standard format for neuronal morphologies; for a large database of morphologies in this format see <http://neuromorpho.org>):
-    
-    
+
     morpho = Morphology.from_file('corticalcell.swc')
-    
 
 To manually create a morphology from a list of points in a similar format to SWC files, see [`Morphology.from_points`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology.from_points "brian2.spatialneuron.morphology.Morphology.from_points").
 
 Morphologies that are created in such a way will use standard names for the sections that allow for the short syntax shown in the previous sections: if a section has one or two child sections, then they will be called `L` and `R`, otherwise they will be numbered starting at `1`.
 
 Morphologies with coordinates can also be created section by section, following the same syntax as for “schematic” morphologies:
-    
-    
+
     soma = Soma(diameter=30*um, x=50*um, y=20*um)
     cylinder = Cylinder(n=10, x=[0, 100]*um, diameter=1*um)
     section = Section(n=5,
@@ -8568,7 +7949,6 @@ Morphologies with coordinates can also be created section by section, following 
                       y=[0, 10, 20, 30, 40, 50]*um,
                       z=[0, 10, 10, 10, 10, 10]*um,
                       diameter=[6, 5, 4, 3, 2, 1]*um)
-    
 
 Note that the `x`, `y`, `z` attributes of [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") and [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuron.html#brian2.spatialneuron.spatialneuron.SpatialNeuron "brian2.spatialneuron.spatialneuron.SpatialNeuron") will return the coordinates at the midpoint of each compartment (as for all other attributes that vary over the length of a compartment, e.g. `diameter` or `distance`), but during construction the coordinates refer to the start and end of the section ([`Cylinder`](../reference/brian2.spatialneuron.morphology.Cylinder.html#brian2.spatialneuron.morphology.Cylinder "brian2.spatialneuron.morphology.Cylinder")), respectively to the coordinates of the nodes between the compartments ([`Section`](../reference/brian2.spatialneuron.morphology.Section.html#brian2.spatialneuron.morphology.Section "brian2.spatialneuron.morphology.Section")).
 
@@ -8585,8 +7965,7 @@ A few additional remarks:
 ## Creating a spatially extended neuron
 
 A [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuron.html#brian2.spatialneuron.spatialneuron.SpatialNeuron "brian2.spatialneuron.spatialneuron.SpatialNeuron") is a spatially extended neuron. It is created by specifying the morphology as a [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") object, the equations for transmembrane currents, and optionally the specific membrane capacitance `Cm` and intracellular resistivity `Ri`:
-    
-    
+
     gL = 1e-4*siemens/cm**2
     EL = -70*mV
     eqs = '''
@@ -8595,109 +7974,81 @@ A [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuro
     '''
     neuron = SpatialNeuron(morphology=morpho, model=eqs, Cm=1*uF/cm**2, Ri=100*ohm*cm)
     neuron.v = EL + 10*mV
-    
 
 Several state variables are created automatically: the [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuron.html#brian2.spatialneuron.spatialneuron.SpatialNeuron "brian2.spatialneuron.spatialneuron.SpatialNeuron") inherits all the geometrical variables of the compartments (`length`, `diameter`, `area`, `volume`), as well as the `distance` variable that gives the distance to the soma. For morphologies that use coordinates, the `x`, `y` and `z` variables are provided as well. Additionally, a state variable `Cm` is created. It is initialized with the value given at construction, but it can be modified on a compartment per compartment basis (which is useful to model myelinated axons). The membrane potential is stored in state variable `v`.
 
 Note that for all variable values that vary across a compartment (e.g. `distance`, `x`, `y`, `z`, `v`), the value that is reported is the value at the midpoint of the compartment.
 
 The key state variable, which must be specified at construction, is `Im`. It is the total transmembrane current, expressed in units of current per area. This is a mandatory line in the definition of the model. The rest of the string description may include other state variables (differential equations or subexpressions) or parameters, exactly as in [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"). At every timestep, Brian integrates the state variables, calculates the transmembrane current at every point on the neuronal morphology, and updates `v` using the transmembrane current and the diffusion current, which is calculated based on the morphology and the intracellular resistivity. Note that the transmembrane current is a surfacic current, not the total current in the compartment. This choice means that the model equations are independent of the number of compartments chosen for the simulation. The space and time constants can obtained for any point of the neuron with the `space_constant` respectively `time_constant` attributes:
-    
-    
+
     l = neuron.space_constant[0]
     tau = neuron.time_constant[0]
-    
 
 The calculation is based on the local total conductance (not just the leak conductance), therefore, it can potentially vary during a simulation (e.g. decrease during an action potential). The reported value is only correct for compartments with a cylindrical geometry, though, it does not give reasonable values for compartments with strongly varying diameter.
 
 To inject a current `I` at a particular point (e.g. through an electrode or a synapse), this current must be divided by the area of the compartment when inserted in the transmembrane current equation. This is done automatically when the flag `point current` is specified, as in the example above. This flag can apply only to subexpressions or parameters with amp units. Internally, the expression of the transmembrane current `Im` is simply augmented with `+I/area`. A current can then be injected in the first compartment of the neuron (generally the soma) as follows:
-    
-    
+
     neuron.I[0] = 1*nA
-    
 
 State variables of the [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuron.html#brian2.spatialneuron.spatialneuron.SpatialNeuron "brian2.spatialneuron.spatialneuron.SpatialNeuron") include all the compartments of that neuron (including subtrees). Therefore, the statement `neuron.v = EL + 10*mV` sets the membrane potential of the entire neuron at -60 mV.
 
 Subtrees can be accessed by attribute (in the same way as in [`Morphology`](../reference/brian2.spatialneuron.morphology.Morphology.html#brian2.spatialneuron.morphology.Morphology "brian2.spatialneuron.morphology.Morphology") objects):
-    
-    
+
     neuron.axon.gNa = 10*gL
-    
 
 Note that the state variables correspond to the entire subtree, not just the main section. That is, if the axon had branches, then the above statement would change `gNa` on the main section and all the sections in the subtree. To access the main section only, use the attribute `main`:
-    
-    
+
     neuron.axon.main.gNa = 10*gL
-    
 
 A typical use case is when one wants to change parameter values at the soma only. For example, inserting an electrode current at the soma is done as follows:
-    
-    
+
     neuron.main.I = 1*nA
-    
 
 A part of a section can be accessed as follows:
-    
-    
+
     initial_segment = neuron.axon[10*um:50*um]
-    
 
 Finally, similar to the way that you can refer to a subset of neurons of a [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"), you can also index the [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuron.html#brian2.spatialneuron.spatialneuron.SpatialNeuron "brian2.spatialneuron.spatialneuron.SpatialNeuron") object itself, e.g. to get a group representing only the first compartment of a cell (typically the soma), you can use:
-    
-    
+
     soma = neuron[0]
-    
 
 In the same way as for sections, you can also use slices, either with the indices of compartments, or with the distance from the root:
-    
-    
+
     first_compartments = neuron[:3]
     first_compartments = neuron[0*um:30*um]
-    
 
 However, note that this is restricted to contiguous indices which most of the time means that all compartments indexed in this way have to be part of the same section. Such indices can be acquired directly from the morphology:
-    
-    
+
     axon = neuron[morpho.axon.indices[:]]
-    
 
 or, more concisely:
-    
-    
+
     axon = neuron[morpho.axon]
-    
 
 ### Synaptic inputs
 
 There are two methods to have synapses on [`SpatialNeuron`](../reference/brian2.spatialneuron.spatialneuron.SpatialNeuron.html#brian2.spatialneuron.spatialneuron.SpatialNeuron "brian2.spatialneuron.spatialneuron.SpatialNeuron"). The first one to insert synaptic equations directly in the neuron equations:
-    
-    
+
     eqs='''
     Im = gL * (EL - v) : amp/meter**2
     Is = gs * (Es - v) : amp (point current)
     dgs/dt = -gs/taus : siemens
     '''
     neuron = SpatialNeuron(morphology=morpho, model=eqs, Cm=1*uF/cm**2, Ri=100*ohm*cm)
-    
 
 Note that, as for electrode stimulation, the synaptic current must be defined as a point current. Then we use a [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") object to connect a spike source to the neuron:
-    
-    
+
     S = Synapses(stimulation, neuron, on_pre='gs += w')
     S.connect(i=0, j=50)
     S.connect(i=1, j=100)
-    
 
 This creates two synapses, on compartments 50 and 100. One can specify the compartment number with its spatial position by indexing the morphology:
-    
-    
+
     S.connect(i=0, j=morpho[25*um])
     S.connect(i=1, j=morpho.axon[30*um])
-    
 
 In this method for creating synapses, there is a single value for the synaptic conductance in any compartment. This means that it will fail if there are several synapses onto the same compartment and synaptic equations are nonlinear. The second method, which works in such cases, is to have synaptic equations in the [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") object:
-    
-    
+
     eqs='''
     Im = gL * (EL - v) : amp/meter**2
     Is = gs * (Es - v) : amp (point current)
@@ -8707,40 +8058,31 @@ In this method for creating synapses, there is a single value for the synaptic c
     S = Synapses(stimulation, neuron, model='''dg/dt = -g/taus : siemens
                                                gs_post = g : siemens (summed)''',
                  on_pre='g += w')
-    
 
 Here each synapse (instead of each compartment) has an associated value `g`, and all values of `g` for each compartment (i.e., all synapses targeting that compartment) are collected into the compartmental variable `gs`.
 
 ### Detecting spikes
 
 To detect and record spikes, we must specify a threshold condition, essentially in the same way as for a [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup"):
-    
-    
+
     neuron = SpatialNeuron(morphology=morpho, model=eqs, threshold='v > 0*mV', refractory='v > -10*mV')
-    
 
 Here spikes are detected when the membrane potential `v` reaches 0 mV. Because there is generally no explicit reset in this type of model (although it is possible to specify one), `v` remains above 0 mV for some time. To avoid detecting spikes during this entire time, we specify a refractory period. In this case no spike is detected as long as `v` is greater than -10 mV. Another possibility could be:
-    
-    
+
     neuron = SpatialNeuron(morphology=morpho, model=eqs, threshold='m > 0.5', refractory='m > 0.4')
-    
 
 where `m` is the state variable for sodium channel activation (assuming this has been defined in the model). Here a spike is detected when half of the sodium channels are open.
 
 With the syntax above, spikes are detected in all compartments of the neuron. To detect them in a single compartment, use the `threshold_location` keyword:
-    
-    
+
     neuron = SpatialNeuron(morphology=morpho, model=eqs, threshold='m > 0.5', threshold_location=30,
                            refractory='m > 0.4')
-    
 
 In this case, spikes are only detecting in compartment number 30. Reset then applies locally to that compartment (if a reset statement is defined). Again the location of the threshold can be specified with spatial position:
-    
-    
+
     neuron = SpatialNeuron(morphology=morpho, model=eqs, threshold='m > 0.5',
                            threshold_location=morpho.axon[30*um],
                            refractory='m > 0.4')
-    
 
 ### Subgroups
 
@@ -8769,8 +8111,7 @@ To summarize: an external identifier will be looked up in the context of an obje
 Note that if you completely specify your namespaces at the [`Group`](../reference/brian2.groups.group.Group.html#brian2.groups.group.Group "brian2.groups.group.Group") level, you should probably pass an empty dictionary as the namespace argument to the `run` call – this will completely switch off the “implicit namespace” mechanism.
 
 The following three examples show the different ways of providing external variable values, all having the same effect in this case:
-    
-    
+
     # Explicit argument to the NeuronGroup
     G = NeuronGroup(1, 'dv/dt = -v / tau : 1', namespace={'tau': 10*ms})
     net = Network(G)
@@ -8786,7 +8127,6 @@ The following three examples show the different ways of providing external varia
     net = Network(G)
     tau = 10*ms
     net.run(10*ms)
-    
 
 External variables are free to change between runs (but not during one run), the value at the time of the [`run()`](../reference/brian2.core.magic.run.html#brian2.core.magic.run "brian2.core.magic.run") call is used in the simulation.
 
@@ -8823,24 +8163,20 @@ We illustrate the global process with an example, the creation and running of a 
 In the case of [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.equations.equations.Equations "brian2.equations.equations.Equations"), the set of equations are combined with a numerical integration method to generate an _abstract code block_ (see below) which represents the integration code for a single time step.
 
 An example of this would be converting the following equations:
-    
-    
+
     eqs = '''
     dv/dt = (v0-v)/tau : volt (unless refractory)
     v0 : volt
     '''
     group = NeuronGroup(N, eqs, threshold='v>10*mV',
                         reset='v=0*mV', refractory=5*ms)
-    
 
 into the following abstract code using the [`exponential_euler`](../reference/brian2.stateupdaters.exponential_euler.exponential_euler.html#brian2.stateupdaters.exponential_euler.exponential_euler "brian2.stateupdaters.exponential_euler.exponential_euler") method (which is selected automatically):
-    
-    
+
     not_refractory = 1*((t - lastspike) > 0.005000)
     _BA_v = -v0
     _v = -_BA_v + (_BA_v + v)*exp(-dt*not_refractory/tau)
     v = _v
-    
 
 The code for this stage can be seen in `NeuronGroup.__init__`, `StateUpdater.__init__`, and `StateUpdater.update_abstract_code` (in `brian2.groups.neurongroup`), and the [`StateUpdateMethod`](../reference/brian2.stateupdaters.base.StateUpdateMethod.html#brian2.stateupdaters.base.StateUpdateMethod "brian2.stateupdaters.base.StateUpdateMethod") classes defined in the `brian2.stateupdaters` package.
 
@@ -8859,8 +8195,7 @@ Abstract code is provided directly by the user for threshold and reset statement
 We convert abstract code into a ‘snippet’, which is a small segment of code which is syntactically correct in the target language, although it may not be runnable on its own (that’s handled by insertion into a ‘template’ later). This is handled by the `CodeGenerator` object in `brian2.codegen.generators`. In the case of converting into python/numpy code this typically doesn’t involve any changes to the code at all because the original code is in Python syntax. For conversion to C++, we have to do some syntactic transformations (e.g. `a**b` is converted to `pow(a, b)`), and add declarations for certain variables (e.g. converting `x=y*z` into `const double x = y*z;`).
 
 An example of a snippet in C++ for the equations above:
-    
-    
+
     const double v0 = _ptr_array_neurongroup_v0[_neuron_idx];
     const double lastspike = _ptr_array_neurongroup_lastspike[_neuron_idx];
     bool not_refractory = _ptr_array_neurongroup_not_refractory[_neuron_idx];
@@ -8871,7 +8206,6 @@ An example of a snippet in C++ for the equations above:
     v = _v;
     _ptr_array_neurongroup_not_refractory[_neuron_idx] = not_refractory;
     _ptr_array_neurongroup_v[_neuron_idx] = v;
-    
 
 The code path that includes snippet generation will be discussed in more detail below, since it involves the concepts of namespaces and variables which we haven’t covered yet.
 
@@ -8880,8 +8214,7 @@ The code path that includes snippet generation will be discussed in more detail 
 The final stage in the generation of a runnable code block is the insertion of a snippet into a template. These use the Jinja2 template specification language. This is handled in `brian2.codegen.templates`.
 
 An example of a template for Python thresholding:
-    
-    
+
     # USES_VARIABLES { not_refractory, lastspike, t }
     {% for line in code_lines %}
     {{line}}
@@ -8890,11 +8223,9 @@ An example of a template for Python thresholding:
     # Set the neuron to refractory
     not_refractory[_return_values] = False
     lastspike[_return_values] = t
-    
 
 and the output code from the example equations above:
-    
-    
+
     # USES_VARIABLES { not_refractory, lastspike, t }
     v = _array_neurongroup_v
     _cond = v > 10 * mV
@@ -8902,7 +8233,6 @@ and the output code from the example equations above:
     # Set the neuron to refractory
     not_refractory[_return_values] = False
     lastspike[_return_values] = t
-    
 
 ### Code block to executing code
 
@@ -8929,50 +8259,40 @@ Templates are stored in Jinja2 format. They come in one of two forms, either the
 This section includes a guide to the various relevant packages and subpackages involved in the code generation process.
 
 `codegen`
-    
 
 Stores the majority of all code generation related code.
 
 `codegen.functions`
-    
 
 Code related to including functions - built-in and user-defined - in generated code.
 
 `codegen.generators`
-    
 
 Each `CodeGenerator` is defined in a module here.
 
 `codegen.runtime`
-    
 
 Each runtime `CodeObject` and its templates are defined in a package here.
 
 `core`
-    
 
 `core.variables`
-    
 
 The `Variable` types are defined here.
 
 `equations`
-    
 
 Everything related to [`Equations`](../reference/brian2.equations.equations.Equations.html#brian2.equations.equations.Equations "brian2.equations.equations.Equations").
 
 `groups`
-    
 
 All [`Group`](../reference/brian2.groups.group.Group.html#brian2.groups.group.Group "brian2.groups.group.Group") related stuff is in here. The `Group.resolve` methods are responsible for determining the abstract namespace.
 
 `parsing`
-    
 
 Various tools using Python’s `ast` module to parse user-specified code. Includes syntax translation to various languages in `parsing.rendering`.
 
 `stateupdaters`
-    
 
 Everything related to generating abstract code blocks from integration methods is here.
 
@@ -9001,19 +8321,16 @@ Brian includes a system for physical units. The base units are defined by their 
 ## Using units
 
 You can generate a physical quantity by multiplying a scalar or vector value with its physical unit:
-    
-    
+
     >>> tau = 20*ms
     >>> print(tau)
     20. ms
     >>> rates = [10, 20, 30]*Hz
     >>> print(rates)
     [ 10.  20.  30.] Hz
-    
 
 Brian will check the consistency of operations on units and raise an error for dimensionality mismatches:
-    
-    
+
     >>> tau += 1  # ms? second?  
     Traceback (most recent call last):
     ...
@@ -9022,25 +8339,20 @@ Brian will check the consistency of operations on units and raise an error for d
     Traceback (most recent call last):
     ...
     DimensionMismatchError: Cannot calculate 3. kg + 3. A, units do not match (units are kilogram and amp).
-    
 
 Most Brian functions will also complain about non-specified or incorrect units:
-    
-    
+
     >>> G = NeuronGroup(10, 'dv/dt = -v/tau: volt', dt=0.5)   
     Traceback (most recent call last):
     ...
     DimensionMismatchError: Function "__init__" expected a quantitity with unit second for argument "dt" but got 0.5 (unit is 1).
-    
 
 Numpy functions have been overwritten to correctly work with units (see the [developer documentation](../developer/units.html) for more details):
-    
-    
+
     >>> print(mean(rates))
     20. Hz
     >>> print(rates.repeat(2))
     [ 10.  10.  20.  20.  30.  30.] Hz
-    
 
 ## Removing units
 
@@ -9053,7 +8365,6 @@ There are various options to remove the units from a value (e.g. to use it with 
   * Directly get the unitless value of a state variable by appending an underscore to the name
 
     
-    
     >>> tau/ms
     20.0
     >>> asarray(rates)
@@ -9061,28 +8372,23 @@ There are various options to remove the units from a value (e.g. to use it with 
     >>> G = NeuronGroup(5, 'dv/dt = -v/tau: volt')
     >>> print(G.v_[:])
     [ 0.  0.  0.  0.  0.]
-    
 
 ## Temperatures
 
 Brian only supports temperatures defined in °K, using the provided `kelvin` unit object. Other conventions such as °C, or °F are not compatible with Brian’s unit system, because they cannot be expressed as a multiplicative scaling of the SI base unit kelvin (their zero point is different). However, in biological experiments and modeling, temperatures are typically reported in °C. How to use such temperatures depends on whether they are used as _temperature differences_ or as _absolute temperatures_ :
 
 temperature differences
-    
 
 Their major use case is the correction of time constants for differences in temperatures based on the [Q10 temperature coefficient](https://en.wikipedia.org/wiki/Q10_\(temperature_coefficient\)). In this case, all temperatures can directly use `kelvin` even though the temperatures are reported in Celsius, since temperature differences in Celsius and Kelvin are identical.
 
 absolute temperatures
-    
 
 Equations such as the [Goldman–Hodgkin–Katz voltage equation](https://en.wikipedia.org/wiki/Goldman_equation) have a factor that depends on the absolute temperature measured in Kelvin. To get this temperature from a temperature reported in °C, you can use the `zero_celsius` constant from the [`brian2.units.constants`](../reference/brian2.units.html#module-brian2.units.constants "brian2.units.constants") package (see below):
-    
-    
+
     from brian2.units.constants import zero_celsius
     
     celsius_temp = 27
     abs_temp = celsius_temp*kelvin + zero_celsius
-    
 
 Note
 
@@ -9106,19 +8412,16 @@ Molar mass constant | \\(M_u\\) | `molar_mass_constant` | \\(1\times 10^{-3}\,\m
 0°C |  | `zero_celsius` | \\(273.15\,\mathrm{K}\\)  
   
 Note that these constants are not imported by default, you will have to explicitly import them from [`brian2.units.constants`](../reference/brian2.units.html#module-brian2.units.constants "brian2.units.constants"). During the import, you can also give them shorter names using Python’s `from ... import ... as ...` syntax. For example, to calculate the \\(\frac{RT}{F}\\) factor that appears in the [Goldman–Hodgkin–Katz voltage equation](https://en.wikipedia.org/wiki/Goldman_equation) you can use:
-    
-    
+
     from brian2 import *
     from brian2.units.constants import zero_celsius, gas_constant as R, faraday_constant as F
     
     celsius_temp = 27
     T = celsius_temp*kelvin + zero_celsius
     factor = R*T/F
-    
 
 The following topics are not essential for beginners.
 
-  
 
 ## Importing units
 
@@ -9129,8 +8432,7 @@ A better choice is normally to do `from brian2.units import *` or import everyth
 ## In-place operations on quantities
 
 In-place operations on quantity arrays change the underlying array, in the same way as for standard numpy arrays. This means, that any other variables referencing the same object will be affected as well:
-    
-    
+
     >>> q = [1, 2] * mV
     >>> r = q
     >>> q += 1*mV
@@ -9138,11 +8440,9 @@ In-place operations on quantity arrays change the underlying array, in the same 
     array([ 2.,  3.]) * mvolt
     >>> r
     array([ 2.,  3.]) * mvolt
-    
 
 In contrast, scalar quantities will never change the underlying value but instead return a new value (in the same way as standard Python scalars):
-    
-    
+
     >>> x = 1*mV
     >>> y = x
     >>> x *= 2
@@ -9150,7 +8450,6 @@ In contrast, scalar quantities will never change the underlying value but instea
     2. * mvolt
     >>> y
     1. * mvolt
-    
 
 ---
 
@@ -9167,8 +8466,7 @@ An additional requirement is that the preferences system allows for extension mo
 ## Accessing and setting preferences
 
 Preferences can be accessed and set either keyword-based or attribute-based. To set/get the value for the preference example mentioned before, the following are equivalent:
-    
-    
+
     prefs['codegen.c.compiler'] = 'gcc'
     prefs.codegen.c.compiler = 'gcc'
     
@@ -9176,7 +8474,6 @@ Preferences can be accessed and set either keyword-based or attribute-based. To 
         ...
     if prefs.codegen.c.compiler == 'gcc':
         ...
-    
 
 Using the attribute-based form can be particulary useful for interactive work, e.g. in ipython, as it offers autocompletion and documentation. In ipython, `prefs.codegen.c?` would display a docstring with all the preferences available in the `codegen.c` category.
 
@@ -9193,8 +8490,7 @@ Preferences are stored in a hierarchy of files, with the following order (each s
 ## Registration
 
 Registration of preferences is performed by a call to [`BrianGlobalPreferences.register_preferences`](../reference/brian2.core.preferences.BrianGlobalPreferences.html#brian2.core.preferences.BrianGlobalPreferences.register_preferences "brian2.core.preferences.BrianGlobalPreferences.register_preferences"), e.g.:
-    
-    
+
     register_preferences(
         'codegen.c',
         'Code generation preferences for the C language',
@@ -9204,7 +8500,6 @@ Registration of preferences is performed by a call to [`BrianGlobalPreferences.r
             default='gcc'),
          ...
         )
-    
 
 The first argument `'codegen.c'` is the base name, and every preference of the form `codegen.c.*` has to be registered by this function (preferences in subcategories such as `codegen.c.somethingelse.*` have to be specified separately). In other words, by calling [`register_preferences`](../reference/brian2.core.preferences.BrianGlobalPreferences.html#brian2.core.preferences.BrianGlobalPreferences.register_preferences "brian2.core.preferences.BrianGlobalPreferences.register_preferences"), a module takes ownership of all the preferences with one particular base name. The second argument is a descriptive text explaining what this category is about. The preferences themselves are provided as keyword arguments, each set to a [`BrianPreference`](../reference/brian2.core.preferences.BrianPreference.html#brian2.core.preferences.BrianPreference "brian2.core.preferences.BrianPreference") object.
 
@@ -9219,15 +8514,13 @@ Setting the value of a preference with a registered base name instantly triggers
 ## File format
 
 The preference files are of the following form:
-    
-    
+
     a.b.c = 1
     # Comment line
     [a]
     b.d = 2
     [a.b]
     b.e = 3
-    
 
 This would set preferences `a.b.c=1`, `a.b.d=2` and `a.b.e=3`.
 
@@ -9240,7 +8533,6 @@ Brian itself defines the following preferences:
 Directory containing GSL code
 
 `GSL.directory` = `None`
-    
 
 Set path to directory containing GSL header files (gsl_odeiv2.h etc.) If this directory is already in Python’s include (e.g. because of conda installation), this path can be set to None.
 
@@ -9537,11 +8829,9 @@ Brian has a system of global preferences that affect how certain objects behave.
 ## Accessing and setting preferences
 
 Preferences can be accessed and set either keyword-based or attribute-based. The following are equivalent:
-    
-    
+
     prefs['codegen.cpp.compiler'] = 'unix'
     prefs.codegen.cpp.compiler = 'unix'
-    
 
 Using the attribute-based form can be particulary useful for interactive work, e.g. in ipython, as it offers autocompletion and documentation. In ipython, `prefs.codegen.cpp?` would display a docstring with all the preferences available in the `codegen.cpp` category.
 
@@ -9554,21 +8844,18 @@ Preferences are stored in a hierarchy of files, with the following order (each s
   * The file `brian_preferences` in the current directory.
 
 The preference files are of the following form:
-    
-    
+
     a.b.c = 1
     # Comment line
     [a]
     b.d = 2
     [a.b]
     b.e = 3
-    
 
 This would set preferences `a.b.c=1`, `a.b.d=2` and `a.b.e=3`.
 
 File setting all preferences to their default values
-    
-    
+
     #-------------------------------------------------------------------------------
     # Logging system preferences
     #-------------------------------------------------------------------------------
@@ -9973,8 +9260,7 @@ File setting all preferences to their default values
     # convert refractoriness into timesteps. Defaults to ``False``.
     
     refractory_timing = False
-    
-    
+
 
 ## List of preferences
 
@@ -9985,7 +9271,6 @@ Brian itself defines the following preferences (including their default values):
 Directory containing GSL code
 
 `GSL.directory` = `None`
-    
 
 Set path to directory containing GSL header files (gsl_odeiv2.h etc.) If this directory is already in Python’s include (e.g. because of conda installation), this path can be set to None.
 
@@ -10290,14 +9575,12 @@ As explained above, [Runtime code generation](../user/computation.html#runtime) 
 ### Standalone mode
 
 For [Standalone code generation](../user/computation.html#cpp-standalone), Brian’s [`seed()`](../reference/brian2.devices.device.seed.html#brian2.devices.device.seed "brian2.devices.device.seed") function will insert code to set the random number generator seed into the generated code. The code will be generated at the position where the [`seed()`](../reference/brian2.devices.device.seed.html#brian2.devices.device.seed "brian2.devices.device.seed") call was made, allowing detailed control over the seeding. For example the following code would generate identical initial conditions every time it is run, but the noise generated by the `xi` variable would differ:
-    
-    
+
     G = NeuronGroup(10, 'dv/dt = -v/(10*ms) + 0.1*xi/sqrt(ms) : 1')
     seed(4321)
     G.v = 'rand()'
     seed()
     run(100*ms)
-    
 
 Note
 
@@ -10344,31 +9627,26 @@ Recording variables during a simulation is done with “monitor” objects. Spec
 To record spikes from a group `G` simply create a [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor") via `SpikeMonitor(G)`. After the simulation, you can access the attributes `i`, `t`, `num_spikes` and `count` of the monitor. The `i` and `t` attributes give the array of neuron indices and times of the spikes. For example, if `M.i==[0, 2, 1]` and `M.t==[1*ms, 2*ms, 3*ms]` it means that neuron 0 fired a spike at 1 ms, neuron 2 fired a spike at 2 ms, and neuron 1 fired a spike at 3 ms. Alternatively, you can also call the [`spike_trains`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor.spike_trains "brian2.monitors.spikemonitor.SpikeMonitor.spike_trains") method to get a dictionary mapping neuron indices to arrays of spike times, i.e. in the above example, `spike_trains = M.spike_trains(); spike_trains[1]` would return `array([ 3.]) * msecond`. The `num_spikes` attribute gives the total number of spikes recorded, and `count` is an array of the length of the recorded group giving the total number of spikes recorded from each neuron.
 
 Example:
-    
-    
+
     G = NeuronGroup(N, model='...')
     M = SpikeMonitor(G)
     run(runtime)
     plot(M.t/ms, M.i, '.')
-    
 
 If you are only interested in summary statistics but not the individual spikes, you can set the `record` argument to `False`. You will then not have access to `i` and `t` but you can still get the `count` and the total number of spikes (`num_spikes`).
 
 ## Recording variables at spike time
 
 By default, a [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor") only records the time of the spike and the index of the neuron that spiked. Sometimes it can be useful to addtionaly record other variables, e.g. the membrane potential for models where the threshold is not at a fixed value. This can be done by providing an extra `variables` argument, the recorded variable can then be accessed as an attribute of the [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor"), e.g.:
-    
-    
+
     G = NeuronGroup(10, 'v : 1', threshold='rand()<100*Hz*dt')
     G.run_regularly('v = rand()')
     M = SpikeMonitor(G, variables=['v'])
     run(100*ms)
     plot(M.t/ms, M.v, '.')
-    
 
 To conveniently access the values of a recorded variable for a single neuron, the [`SpikeMonitor.values`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor.values "brian2.monitors.spikemonitor.SpikeMonitor.values") method can be used that returns a dictionary with the values for each neuron.:
-    
-    
+
     G = NeuronGroup(N, '''dv/dt = (1-v)/(10*ms) : 1
                           v_th : 1''',
                     threshold='v > v_th',
@@ -10382,7 +9660,6 @@ To conveniently access the values of a recorded variable for a single neuron, th
     print('Threshold crossing values for neuron 0: {}'.format(v_values[0]))
     hist(spike_mon.v, np.arange(0, 1, .1))
     show()
-    
 
 Note
 
@@ -10391,13 +9668,11 @@ Spikes are not the only events that can trigger recordings, see [Custom events](
 ## Recording variables continuously
 
 To record how a variable evolves over time, use a [`StateMonitor`](../reference/brian2.monitors.statemonitor.StateMonitor.html#brian2.monitors.statemonitor.StateMonitor "brian2.monitors.statemonitor.StateMonitor"), e.g. to record the variable `v` at every time step and plot it for neuron 0:
-    
-    
+
     G = NeuronGroup(...)
     M = StateMonitor(G, 'v', record=True)
     run(...)
     plot(M.t/ms, M.v[0]/mV)
-    
 
 In general, you specify the group, variables and indices you want to record from. You specify the variables with a string or list of strings, and the indices either as an array of indices or `True` to record all indices (but beware because this may take a lot of memory).
 
@@ -10406,22 +9681,18 @@ After the simulation, you can access these variables as attributes of the monito
 Note that you can also use [`StateMonitor`](../reference/brian2.monitors.statemonitor.StateMonitor.html#brian2.monitors.statemonitor.StateMonitor "brian2.monitors.statemonitor.StateMonitor") to record from [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") where the indices are the synapse indices rather than neuron indices.
 
 In this example, we record two variables v and u, and record from indices 0, 10 and 100. Afterwards, we plot the recorded values of v and u from neuron 0:
-    
-    
+
     G = NeuronGroup(...)
     M = StateMonitor(G, ('v', 'u'), record=[0, 10, 100])
     run(...)
     plot(M.t/ms, M.v[0]/mV, label='v')
     plot(M.t/ms, M.u[0]/mV, label='u')
-    
 
 There are two subtly different ways to get the values for specific neurons: you can either index the 2D array stored in the attribute with the variable name (as in the example above) or you can index the monitor itself. The former will use an index relative to the recorded neurons (e.g. `M.v[1]` will return the values for the second _recorded_ neuron which is the neuron with the index 10 whereas `M.v[10]` would raise an error because only three neurons have been recorded), whereas the latter will use an absolute index corresponding to the recorded group (e.g. `M[1].v` will raise an error because the neuron with the index 1 has not been recorded and `M[10].v` will return the values for the neuron with the index 10). If all neurons have been recorded (e.g. with `record=True`) then both forms give the same result.
 
 Note that for plotting all recorded values at once, you have to transpose the variable values:
-    
-    
+
     plot(M.t/ms, M.v.T/mV)
-    
 
 Note
 
@@ -10430,25 +9701,21 @@ In contrast to Brian 1, the values are recorded at the beginning of a time step 
 ## Recording population rates
 
 To record the time-varying firing rate of a population of neurons use [`PopulationRateMonitor`](../reference/brian2.monitors.ratemonitor.PopulationRateMonitor.html#brian2.monitors.ratemonitor.PopulationRateMonitor "brian2.monitors.ratemonitor.PopulationRateMonitor"). After the simulation the monitor will have two attributes `t` and `rate`, the latter giving the firing rate at each time step corresponding to the time in `t`. For example:
-    
-    
+
     G = NeuronGroup(...)
     M = PopulationRateMonitor(G)
     run(...)
     plot(M.t/ms, M.rate/Hz)
-    
 
 To get a smoother version of the rate, use [`PopulationRateMonitor.smooth_rate`](../reference/brian2.monitors.ratemonitor.PopulationRateMonitor.html#brian2.monitors.ratemonitor.PopulationRateMonitor.smooth_rate "brian2.monitors.ratemonitor.PopulationRateMonitor.smooth_rate").
 
 The following topics are not essential for beginners.
 
-  
 
 ## Getting all data
 
 Note that all monitors are implement as “groups”, so you can get all the stored values in a monitor with the [`get_states`](../reference/brian2.groups.group.VariableOwner.html#brian2.groups.group.VariableOwner.get_states "brian2.groups.group.VariableOwner.get_states") method, which can be useful to dump all recorded data to disk, for example:
-    
-    
+
     import pickle
     group = NeuronGroup(...)
     state_mon = StateMonitor(group, 'v', record=...)
@@ -10456,26 +9723,22 @@ Note that all monitors are implement as “groups”, so you can get all the sto
     data = state_mon.get_states(['t', 'v'])
     with open('state_mon.pickle', 'w') as f:
         pickle.dump(data, f)
-    
 
 ## Recording values for a subset of the run
 
 Monitors can be created and deleted between runs, e.g. to ignore the first second of your simulation in your recordings you can do:
-    
-    
+
     # Set up network without monitor
     run(1*second)
     state_mon = StateMonitor(....)
     run(...)  # Continue run and record with the StateMonitor
-    
 
 Alternatively, you can set the monitor’s [`active`](../reference/brian2.core.base.BrianObject.html#brian2.core.base.BrianObject.active "brian2.core.base.BrianObject.active") attribute as explained in the [Scheduling](running.html#scheduling) section.
 
 ## Freeing up memory in long recordings
 
 Creating and deleting monitors can also be useful to free memory during a long recording. The following will do a simulation run, dump the monitor data to disk, delete the monitor and finally continue the run with a new monitor:
-    
-    
+
     import pickle
     # Set up network
     state_mon = StateMonitor(...)
@@ -10487,22 +9750,18 @@ Creating and deleting monitors can also be useful to free memory during a long r
     del data
     state_mon = StateMonitor(...)
     run(...)  # another long run
-    
 
 Note that this technique cannot be applied in [standalone mode](computation.html#cpp-standalone).
 
 ## Recording random subsets of neurons
 
 In large networks, you might only be interested in the activity of a random subset of neurons. While you can specify a `record` argument for a [`StateMonitor`](../reference/brian2.monitors.statemonitor.StateMonitor.html#brian2.monitors.statemonitor.StateMonitor "brian2.monitors.statemonitor.StateMonitor") that allows you to select a subset of neurons, this is not possible for [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor")/[`EventMonitor`](../reference/brian2.monitors.spikemonitor.EventMonitor.html#brian2.monitors.spikemonitor.EventMonitor "brian2.monitors.spikemonitor.EventMonitor") and [`PopulationRateMonitor`](../reference/brian2.monitors.ratemonitor.PopulationRateMonitor.html#brian2.monitors.ratemonitor.PopulationRateMonitor "brian2.monitors.ratemonitor.PopulationRateMonitor"). However, Brian allows you to record with these monitors from a subset of neurons by using a [subgroup](models.html#subgroups):
-    
-    
+
     group = NeuronGroup(1000, ...)
     spike_mon = SpikeMonitor(group[:100])  # only record first 100 neurons
-    
 
 It might seem like a restriction that such a subgroup has to be contiguous, but the order of neurons in a group does not have any meaning as such; in a randomly ordered group of neurons, any contiguous group of neurons can be considered a random subset. If some aspects of your model _do_ depend on the position of the neuron in a group (e.g. a ring model, where neurons are connected based on their distance in the ring, or a model where initial values or parameters span a range of values in a regular fashion), then this requires an extra step: instead of using the order of neurons in the group directly, or depending on the neuron index `i`, create a new, shuffled, index variable as part of the model definition and then depend on this index instead:
-    
-    
+
     group = NeuronGroup(10000, '''....
                                   index : integer (constant)''')
     indices = group.i[:]
@@ -10510,26 +9769,22 @@ It might seem like a restriction that such a subgroup has to be contiguous, but 
     group.index = indices
     # Then use 'index' in string expressions or use it as an index array
     # for initial values/parameters defined as numpy arrays
-    
 
 If this solution is not feasible for some reason, there is another approach that works for a [`SpikeMonitor`](../reference/brian2.monitors.spikemonitor.SpikeMonitor.html#brian2.monitors.spikemonitor.SpikeMonitor "brian2.monitors.spikemonitor.SpikeMonitor")/[`EventMonitor`](../reference/brian2.monitors.spikemonitor.EventMonitor.html#brian2.monitors.spikemonitor.EventMonitor "brian2.monitors.spikemonitor.EventMonitor"). You can add an additional flag to each neuron, stating whether it should be recorded or not. Then, you define a new [custom event](../advanced/custom_events.html) that is identical to the event you are interested in, but additionally requires the flag to be set. E.g. to only record the spikes of neurons with the `to_record` attribute set:
-    
-    
+
     group = NeuronGroup(..., '''...
                                 to_record : boolean (constant)''',
                         threshold='...', reset='...',
                         events={'recorded_spike': '... and to_record'})
     group.to_record = ...
     mon_events = EventMonitor(group, 'recorded_spike')
-    
 
 Note that this solution will evaluate the threshold condition for each neuron twice, and is therefore slightly less efficient. There’s one additional caveat: you’ll have to manually include `and not_refractory` in your `events` definition if your neuron uses refractoriness. This is done automatically for the `threshold` condition, but not for any user-defined events.
 
 ## Recording population averages
 
 Continuous recordings from large groups over long simulation times can fill up the working memory quickly: recording a single variable from 1000 neurons for 100 seconds at the default time resolution results in an array of about 8 Gigabytes. While this issue can be ameliorated using the above approaches, the downstream data analysis is often based on population averages. These can be recorded efficiently using a dummy group and the [`Synapses`](../reference/brian2.synapses.synapses.Synapses.html#brian2.synapses.synapses.Synapses "brian2.synapses.synapses.Synapses") class’ [summed variable syntax](synapses.html#summed-variables):
-    
-    
+
     group = NeuronGroup(..., 'dv/dt = ... : volt', ...)
     
     # Dummy group to store the average membrane potential at every time step
@@ -10541,7 +9796,6 @@ Continuous recordings from large groups over long simulation times can fill up t
     
     # Monitor recording the average membrane potential
     vm_monitor = StateMonitor(vm_container, 'average_vm', record=True)
-    
 
 ---
 
@@ -10562,32 +9816,25 @@ Brian allows you to model the absolute refractory period of a neuron in a flexib
 ## Defining the refractory period
 
 The refractory period is specified by the `refractory` keyword in the [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") initializer. In the simplest case, this is simply a fixed time, valid for all neurons:
-    
-    
+
     G = NeuronGroup(N, model='...', threshold='...', reset='...',
                     refractory=2*ms)
-    
 
 Alternatively, it can be a string expression that evaluates to a time. This expression will be evaluated after every spike and allows for a varying refractory period. For example, the following will set the refractory period to a random duration between 1ms and 3ms after every spike:
-    
-    
+
     G = NeuronGroup(N, model='...', threshold='...', reset='...',
                     refractory='(1 + 2*rand())*ms')
-    
 
 In general, modelling a refractory period that varies across neurons involves declaring a state variable that stores the refractory period per neuron as a model parameter. The refractory expression can then refer to this parameter:
-    
-    
+
     G = NeuronGroup(N, model='''...
                                 ref : second''', threshold='...',
                     reset='...', refractory='ref')
     # Set the refractory period for each cell
     G.ref = ...
-    
 
 This state variable can also be a dynamic variable itself. For example, it can serve as an adaptation mechanism by increasing it after every spike and letting it relax back to a steady-state value between spikes:
-    
-    
+
     refractory_0 = 2*ms
     tau_refractory = 50*ms
     G = NeuronGroup(N, model='''...
@@ -10596,14 +9843,11 @@ This state variable can also be a dynamic variable itself. For example, it can s
                     reset='''...
                              ref += 1*ms''')
     G.ref = refractory_0
-    
 
 In some cases, the condition for leaving the refractory period is not easily expressed as a certain time span. For example, in a Hodgkin-Huxley type model the threshold is only used for _counting_ spikes and the refractoriness is used to prevent the count of multiple spikes for a single threshold crossing (the threshold condition would evaluate to `True` for several time points). When a neuron should leave the refractory period is not easily expressed as a time span but more naturally as a condition that the neuron should remain refractory for as long as it stays above the threshold. This can be achieved by using a string expression for the `refractory` keyword that evaluates to a boolean condition:
-    
-    
+
     G = NeuronGroup(N, model='...', threshold='v > -20*mV',
                     refractory='v >= -20*mV')
-    
 
 The `refractory` keyword should be read as “stay refractory as long as the condition remains true”. In fact, specifying a time span for the refractoriness will be automatically transformed into a logical expression using the current time `t` and the time of the last spike `lastspike`. Specifying `refractory=2*ms` is basically equivalent to specifying `refractory='(t - lastspike) <= 2*ms'`. However, this expression can give inconsistent results for the common case that the refractory period is a multiple of the simulation timestep. Due to floating point impreciseness, the actual value of `t - lastspike` can be slightly above or below a multiple of the simulation time step; comparing it directly to the refractory period can therefore lead to an end of the refractory one time step sooner or later. To avoid this issue, the actual code used for the above example is equivalent to `refractory='timestep(t - lastspike, dt) <= timestep(2*ms, dt)'`. The [`timestep`](../reference/brian2.core.functions.timestep.html#brian2.core.functions.timestep "brian2.core.functions.timestep") function is provided by Brian and takes care of converting a time into a time step in a safe way.
 
@@ -10612,26 +9856,21 @@ Added in version 2.1.3: The `timestep` function is now used to avoid floating po
 ## Defining model behaviour during refractoriness
 
 The refractoriness definition as described above only has a single effect by itself: threshold crossings during the refractory period are ignored. In the following model, the variable `v` continues to update during the refractory period but it does not elicit a spike if it crosses the threshold:
-    
-    
+
     G = NeuronGroup(N, 'dv/dt = -v / tau : 1',
                     threshold='v > 1', reset='v=0',
                     refractory=2*ms)
-    
 
 There is also a second implementation of refractoriness that is supported by Brian, one or several state variables can be clamped during the refractory period. To model this kind of behaviour, variables that should stop being updated during refractoriness can be marked with the `(unless refractory)` flag:
-    
-    
+
     G = NeuronGroup(N, '''dv/dt = -(v + w)/ tau_v : 1 (unless refractory)
                           dw/dt = -w / tau_w : 1''',
                     threshold='v > 1', reset='v=0; w+=0.1', refractory=2*ms)
-    
 
 In the above model, the `v` variable is clamped at 0 for 2ms after a spike but the adaptation variable `w` continues to update during this time. In addition, a variable of a neuron that is in its refractory period is _read-only_ : incoming synapses or other code will have no effect on the value of `v` until it leaves its refractory period.
 
 The following topics are not essential for beginners.
 
-  
 
 ## Arbitrary refractoriness
 
@@ -10640,20 +9879,17 @@ In fact, arbitrary behaviours can be defined using Brian’s refractoriness mech
 A [`NeuronGroup`](../reference/brian2.groups.neurongroup.NeuronGroup.html#brian2.groups.neurongroup.NeuronGroup "brian2.groups.neurongroup.NeuronGroup") with refractoriness automatically defines two variables:
 
 `not_refractory`
-    
 
 A boolean variable stating whether a neuron is allowed to spike.
 
 `lastspike`
-    
 
 The time of the last spike of the neuron.
 
 The variable `not_refractory` is updated at every time step by checking the refractoriness condition – for a refractoriness defined by a time period, this means comparing `lastspike` to the current time `t`. The `not_refractory` variable is then used to implement the refractoriness behaviour. Specifically, the `threshold` condition is replaced by `threshold and not_refractory` and differential equations that are marked as `(unless refractory)` are multiplied by `int(not_refractory)` (so that they have the value 0 when the neuron is refractory).
 
 This `not_refractory` variable is also available to the user to define more sophisticated refractoriness behaviour. For example, the following code updates the `w` variable with a different time constant during refractoriness:
-    
-    
+
     G = NeuronGroup(N, '''dv/dt = -(v + w)/ tau_v : 1 (unless refractory)
                           dw/dt = (-w / tau_active)*int(not_refractory) + (-w / tau_ref)*(1 - int(not_refractory)) : 1''',
                     threshold='v > 1', reset='v=0; w+=0.1', refractory=2*ms)
