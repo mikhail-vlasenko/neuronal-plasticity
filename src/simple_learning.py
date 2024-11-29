@@ -12,10 +12,14 @@ from src.input_from_csv import csv_input_neurons
 NUM_NEURONS = 8
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
+NUM_EXPOSURES = 2
 OUTPUT_NEURON_PARAMS['refractory'] = SAMPLE_DURATION * 0.9
 epochs = 4
+weight_coef = 0.5
 
-input_neurons, input_dim, simulation_duration = csv_input_neurons('../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs)
+input_neurons, input_dim, simulation_duration = csv_input_neurons(
+    '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
+)
 input_monitor = SpikeMonitor(input_neurons)
 
 neurons = NeuronGroup(NUM_NEURONS, **NEURON_PARAMS)
@@ -39,7 +43,7 @@ input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
 main_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
 main_synapse.connect()  # All-to-all connectivity
 
-main_synapse.s = 'rand()'
+main_synapse.s = 'weight_coef * rand()'
 main_synapse_monitor = StateMonitor(main_synapse, ['s'], record=True)
 
 reward_value = 5e-3  # epsilon_dopa
