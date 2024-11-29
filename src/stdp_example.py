@@ -2,7 +2,9 @@ from brian2 import *
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-prefs.codegen.target = 'numpy'
+
+# import brian2cuda
+# set_device("cuda_standalone")
 
 # Parameters
 simulation_duration = 6 * second
@@ -19,6 +21,7 @@ taue = 5*ms
 taupre = 20*ms
 taupost = taupre
 gmax = 1  # todo: what is this?
+max_strength = 1
 dApre = 1  # this is basically by how much the eligibility trace increases
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
@@ -34,14 +37,17 @@ epsilon_dopa = 5e-3
 
 ## Stimuli section
 input_indices = array([0,
-                       0, 1, 0, 1, 1, 0,
+                       1,
+                       0, 1, 1, 0,
                        0, 1, 0, 1,
                        0, 0])
 input_times = array([500,
-                     1000, 1050, 1500, 1510, 2000, 2010,
-                     3500, 3550, 4000, 4010,
+                     1000,
+                     1500, 1550, 2000, 2020,
+                     3500, 3510, 4000, 4010,
                      5500, 5550])*ms
 spike_input = SpikeGeneratorGroup(2, input_indices, input_times)
+dopamine_times = array([1020, 1520, 2050, 3520, 4020])*ms
 
 neurons = NeuronGroup(2, '''dv/dt = (ge * (Ee-v) + El - v) / taum : volt
                             dge/dt = -ge / taue : 1''',
@@ -66,26 +72,26 @@ synapse_stdp = Synapses(neurons, neurons,
                          ds/dt = c * d / taus : 1 (clock-driven)
                          dApre/dt = -Apre / taupre : 1 (event-driven)
                          dApost/dt = -Apost / taupost : 1 (event-driven)''',
-                   on_pre='''ge += s
+                   on_pre='''
+                          s = clip(s, -max_strength, max_strength)
+                          ge += s
                           Apre += dApre
                           c = clip(c + Apost, -gmax, gmax)
-                          s = clip(s, -gmax, gmax)
                           ''',
-                   on_post='''Apost += dApost
+                   on_post='''
+                          Apost += dApost
                           c = clip(c + Apre, -gmax, gmax)
-                          s = clip(s, -gmax, gmax)
                           ''',
                    method='euler'
                    )
 synapse_stdp.connect(i=0, j=1)
-synapse_stdp.s = 1e-10
-synapse_stdp.c = 1e-10
+synapse_stdp.s = 0.1
+synapse_stdp.c = 0.1
 synapse_stdp.d = 0
 synapse_stdp_monitor = StateMonitor(synapse_stdp, ['s', 'c', 'd'], record=[0])
 
 ## Dopamine signaling section
-dopamine_indices = array([0, 0, 0, 0, 0])
-dopamine_times = array([1020, 1520, 2020, 3520, 4020])*ms
+dopamine_indices = np.zeros(len(dopamine_times))
 dopamine = SpikeGeneratorGroup(1, dopamine_indices, dopamine_times)
 dopamine_monitor = SpikeMonitor(dopamine)
 reward = Synapses(dopamine, synapse_stdp, model='''''',
@@ -169,4 +175,11 @@ ax5.set_xlabel('Time (s)')
 # Add title describing the model
 plt.suptitle('Dopamine Modulated STDP', fontsize=16)
 
-plt.show()
+try:
+    plt.show()
+except ConnectionResetError:
+    try:
+        time.sleep(2)
+        plt.show()
+    except ConnectionResetError:
+        plt.savefig('dopamine_modulated_stdp.png')

@@ -10,13 +10,16 @@ from omegaconf import DictConfig
 from omegaconf import OmegaConf
 import os
 import logging
+import brian2cuda
+
+set_device("cuda_standalone")
 
 defaultclock.dt = 0.1*ms # Time resolution of the simulation
 np.random.seed(net_dict['Seed']) 
 @hydra.main(version_base=None, config_path='config', config_name='config.yaml')
 def main(cfg: DictConfig):
     t_sim = cfg.t_sim * ms # Simulation time - needs to be in ms in config file
-    EXPERIMENT_PATH = os.environ.get('EXPERIMENT_PATH') # Path of directory where experiments are saved
+    EXPERIMENT_PATH = os.environ.get('EXPERIMENT_PATH', 'experiments') # Path of directory where experiments are saved
     experiment_dir = EXPERIMENT_PATH
     run_dir, raster_plots_dir, spike_times_dir, metrics_dir = create_run_folder(experiment_dir, cfg.experiment_type)
     save_config(cfg, run_dir)
