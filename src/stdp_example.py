@@ -2,6 +2,7 @@ from brian2 import *
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+prefs.codegen.target = 'numpy'
 
 # Parameters
 simulation_duration = 6 * second
@@ -11,22 +12,22 @@ taum = 10*ms
 Ee = 0*mV
 vt = -58.5*mV  # was -54
 vr = -60*mV
-El = -74*mV  # what is this?
+El = -74*mV  # basically resting potential
 taue = 5*ms
 
 ## STDP
 taupre = 20*ms
 taupost = taupre
 gmax = 1  # todo: what is this?
-dApre = .01  # and this?
+dApre = 1  # this is basically by how much the eligibility trace increases
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
 ## Dopamine signaling
-tauc = 1000*ms
+tauc = 1000*ms  # very slow decay of eligibility trace
 taud = 200*ms
-taus = 1e-2*ms  # changed from 1, looks like lr?
+taus = 1*ms  # changed from 1, looks like lr? is lr, but prob better to increase eligibility trace for faster learning
 epsilon_dopa = 5e-3
 
 # Setting the stage
@@ -35,11 +36,11 @@ epsilon_dopa = 5e-3
 input_indices = array([0,
                        0, 1, 0, 1, 1, 0,
                        0, 1, 0, 1,
-                       0])
+                       0, 0])
 input_times = array([500,
                      1000, 1050, 1500, 1510, 2000, 2010,
                      3500, 3550, 4000, 4010,
-                     5500])*ms
+                     5500, 5550])*ms
 spike_input = SpikeGeneratorGroup(2, input_indices, input_times)
 
 neurons = NeuronGroup(2, '''dv/dt = (ge * (Ee-v) + El - v) / taum : volt
@@ -151,7 +152,6 @@ ax4.set_xlim([0, simulation_duration/second])
 ax4.set_ylabel('Synaptic\nstrength s(t)')
 ax4.set_xticks([])
 
-# todo: i dont see the spike going into positive potential, does it matter?
 # Plot 5: Postsynaptic potential
 potential = state_monitor.v.T.flatten()/mV
 ax5 = fig.add_subplot(gs[4])
