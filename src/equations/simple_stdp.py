@@ -8,7 +8,7 @@ vr = -60*mV  # reset potential
 El = -70*mV  # resting potential
 OEl = -74*mV  # resting potential for output neurons
 taue = 5*ms
-output_neuron_rate_growth = 0.1
+output_neuron_rate_growth = 0.
 
 ## STDP
 taupre = 20*ms

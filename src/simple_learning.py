@@ -1,4 +1,4 @@
-from urllib.error import URLError
+import math
 
 from brian2 import *
 import seaborn as sns
@@ -16,8 +16,9 @@ NUM_EXPOSURES = 2
 OUTPUT_NEURON_PARAMS['refractory'] = SAMPLE_DURATION * 0.9
 epochs = 4
 weight_coef = 0.5
+reward_value = 5e-3  # epsilon_dopa
 
-input_neurons, input_dim, simulation_duration = csv_input_neurons(
+input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
 )
 input_monitor = SpikeMonitor(input_neurons)
@@ -46,23 +47,29 @@ main_synapse.connect()  # All-to-all connectivity
 main_synapse.s = 'weight_coef * rand()'
 main_synapse_monitor = StateMonitor(main_synapse, ['s'], record=True)
 
-reward_value = 5e-3  # epsilon_dopa
 expected_reward = 0
-# + reward because correct answer is 0, and 0 spiked
-reward_synapse0 = Synapses(output_neurons[0], main_synapse, model='''''',
+# + reward because 0 spiked (reward is negative for samples with answer 1)
+reward_synapse00 = Synapses(output_neurons[0], main_synapse, model='''''',
                             on_pre='''d_post += reward_value''',
                             method='exact')
-# - reward because correct answer is 0, while 1 spiked
-reward_synapse1 = Synapses(output_neurons[1], main_synapse, model='''''',
+reward_synapse01 = Synapses(output_neurons[0], input_synapse, model='''''',
+                            on_pre='''d_post += reward_value''',
+                            method='exact')
+reward_synapse00.connect()
+reward_synapse01.connect()
+# - reward because 1 spiked
+reward_synapse10 = Synapses(output_neurons[1], main_synapse, model='''''',
                             on_pre='''d_post -= reward_value''',
                             method='exact')
-reward_synapse0.connect()
-reward_synapse1.connect()
+reward_synapse11 = Synapses(output_neurons[1], input_synapse, model='''''',
+                            on_pre='''d_post -= reward_value''',
+                            method='exact')
+reward_synapse10.connect()
+reward_synapse11.connect()
 
-completed = 0
-while completed < simulation_duration:
+for i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
+    reward_value = abs(reward_value) if targets[i] == 0 else -abs(reward_value)
     run(SAMPLE_DURATION)
-    completed += SAMPLE_DURATION
     output_neurons.rate = 0
     output_neurons.v = OEl
 
@@ -136,6 +143,8 @@ ax_input.set_title('Input synaptic strengths over time')
 main_synapse_data = main_synapse_monitor.s[:]
 times_main = main_synapse_monitor.t/ms
 
+print(f'Weight delta:\n{(main_synapse_data.T[-1] - main_synapse_data.T[0]).reshape(NUM_NEURONS, OUTPUT_NEURONS)}')
+
 # Create heatmap for main synapses
 sns.heatmap(main_synapse_data,
             ax=ax_main,
@@ -162,12 +171,5 @@ ax3.legend()
 ax3.set_xlim([-0.02, simulation_duration/ms])
 ax3.set_ylim([-1, input_dim + NUM_NEURONS + OUTPUT_NEURONS])
 
-try:
-    plt.show()
-except Exception as e:
-    print(f'Error during plotting: {e}')
-    try:
-        time.sleep(2)
-        plt.show()
-    except Exception as e:
-        plt.savefig('simple_learning.png')
+plt.savefig('simple_learning.png')
+plt.show()
