@@ -5,8 +5,10 @@ taum = 10*ms
 Ee = 0*mV    # reversal potential
 vt = -54*mV  # threshold potential
 vr = -60*mV  # reset potential
-El = -74*mV  # resting potential
+El = -66*mV  # resting potential
+OEl = -74*mV  # resting potential for output neurons
 taue = 5*ms
+output_neuron_rate_growth = 0.1
 
 ## STDP
 taupre = 20*ms
@@ -62,13 +64,13 @@ SYNAPSE_PARAMS = {
 
 
 OUTPUT_NEURON_MODEL = '''
-dv/dt = (ge * (Ee-v) + El - v + rate*taum) / taum : volt
+dv/dt = (ge * (Ee-v) + OEl - v + rate * volt) / taum : volt
 dge/dt = -ge / taue : 1
-rate : volt/second  # Growth rate - will be reset after each spike
+drate/dt = output_neuron_rate_growth/second : 1  # Grows linearly with time with slope 1/second 
 '''
 
 OUTPUT_NEURON_PARAMS = {
-    'model': NEURON_MODEL,
+    'model': OUTPUT_NEURON_MODEL,
     'threshold': 'v > vt',
     'reset': '''
         v = vr
