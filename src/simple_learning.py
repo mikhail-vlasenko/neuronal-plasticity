@@ -34,6 +34,7 @@ output_neurons.v = OEl
 
 output_monitor = SpikeMonitor(output_neurons)
 state_monitor = StateMonitor(output_neurons, ['v', 'rate'], record=[0, 1])
+monitors = [input_monitor, neuron_monitor, output_monitor, state_monitor]
 
 input_synapse = Synapses(input_neurons, neurons, **SYNAPSE_PARAMS)
 # connect input to 2 of the "main" neurons
@@ -52,59 +53,40 @@ output_synapse.connect(p=0.25)
 
 output_synapse.s = 'weight_coef * rand()'
 output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
+monitors += [input_synapse_monitor, output_synapse_monitor]
 
 expected_reward = 0
-
-# for target in [input_synapse, main_synapse, output_synapse]:
-# + reward because 0 spiked (reward is negative for samples with answer 1)
-synapse1 = Synapses(output_neurons[0], input_synapse, model='''''',
+reward_synapses = []
+for target in [input_synapse, main_synapse, output_synapse]:
+    # + reward because 0 spiked (reward is negative for samples with answer 1)
+    reward_synapses.append(Synapses(output_neurons[0], target, model='''''',
                                on_pre='''d_post += reward_value''',
-                               method='exact')
-synapse1.connect()
-# reward_synapses[-1].connect()
+                               method='exact'))
+    reward_synapses[-1].connect()
 
-# - reward because 1 spiked
-synapse2 = Synapses(output_neurons[1], input_synapse, model='''''',
+    # - reward because 1 spiked
+    reward_synapses.append(Synapses(output_neurons[1], target, model='''''',
                                on_pre='''d_post -= reward_value''',
-                               method='exact')
-synapse2.connect()
-synapse3 = Synapses(output_neurons[0], main_synapse, model='''''',
-                               on_pre='''d_post += reward_value''',
-                               method='exact')
-synapse3.connect()
-synapse4 = Synapses(output_neurons[1], main_synapse, model='''''',
-                               on_pre='''d_post -= reward_value''',
-                               method='exact')
-synapse4.connect()
-synapse5 = Synapses(output_neurons[0], output_synapse, model='''''',
-                               on_pre='''d_post += reward_value''',
-                               method='exact')
-synapse5.connect()
-synapse6 = Synapses(output_neurons[1], output_synapse, model='''''',
-                               on_pre='''d_post -= reward_value''',
-                               method='exact')
-synapse6.connect()
+                               method='exact'))
+    reward_synapses[-1].connect()
 
-post_prediction_inhibitor = Synapses(output_neurons, neurons, model='''''',
-                                    on_pre='''
-                                    v_post = El
-                                    ge = 0
-                                    ''',
-                                    method='exact')
-post_prediction_inhibitor.connect()
+post_prediction_inhibitors = []
+for target in [neurons, output_neurons]:
+    post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
+                                        on_pre='''
+                                        v_post = El
+                                        ge = 0
+                                        ''',
+                                        method='exact'))
+    post_prediction_inhibitors[-1].connect()
 
-post_prediction_inhibitor2 = Synapses(output_neurons, output_neurons, model='''''',
-                                    on_pre='''
-                                    v_post = El
-                                    ge = 0
-                                    ''',
-                                    method='exact')
-post_prediction_inhibitor2.connect()
+net = Network(input_neurons, neurons, output_neurons, input_synapse, main_synapse, output_synapse,
+              *monitors, *reward_synapses, *post_prediction_inhibitors)
 
 
 for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
     reward_value = abs(reward_value) if targets[sample_i] == 0 else -abs(reward_value)
-    run(SAMPLE_DURATION)
+    net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
     output_neurons.v = OEl
 
