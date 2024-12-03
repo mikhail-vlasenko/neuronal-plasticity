@@ -27,7 +27,7 @@ taus = 1*ms  # this is lr, but prob better to increase eligibility trace for fas
 epsilon_dopa = 5e-3
 
 NEURON_MODEL = '''
-dv/dt = (ge * (Ee-v) + El - v) / taum : volt
+dv/dt = (ge * (Ee-v) + El - v) / taum : volt (unless refractory)
 dge/dt = -ge / taue : 1
 '''
 
@@ -35,7 +35,7 @@ NEURON_PARAMS = {
     'model': NEURON_MODEL,
     'threshold': 'v>vt',
     'reset': 'v = vr',
-    'refractory': '5*ms',
+    'refractory': '2*ms',
     'method': 'euler'
 }
 
@@ -59,7 +59,8 @@ SYNAPSE_PARAMS = {
         Apost += dApost
         c = clip(c + Apre, -gmax, gmax)
     ''',
-    'method': 'euler'
+    'method': 'euler',
+    # 'delay': 1*ms
 }
 
 

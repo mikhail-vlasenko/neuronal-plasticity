@@ -9,13 +9,15 @@ from src.equations.simple_stdp import *
 from src.input_from_csv import csv_input_neurons
 
 
-NUM_NEURONS = 8
+np.random.seed(3)
+
+NUM_NEURONS = 32
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
-NUM_EXPOSURES = 2
+NUM_EXPOSURES = 4
 OUTPUT_NEURON_PARAMS['refractory'] = SAMPLE_DURATION * 0.9
 epochs = 4
-weight_coef = 0.5
+weight_coef = 0.2
 reward_value = 5e-3  # epsilon_dopa
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
@@ -35,40 +37,73 @@ state_monitor = StateMonitor(output_neurons, ['v', 'rate'], record=[0, 1])
 
 input_synapse = Synapses(input_neurons, neurons, **SYNAPSE_PARAMS)
 # connect input to 2 of the "main" neurons
-for i in range(input_dim):
-    input_synapse.connect(i=i, j=[2 * i, 2 * i + 1])
+for input_idx in range(input_dim):
+    input_synapse.connect(i=input_idx, j=[2 * input_idx, 2 * input_idx + 1])
+
 input_synapse.s = 1
 input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
 
-# randomized all to all weights in the "main" neurons
-main_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
-main_synapse.connect()  # All-to-all connectivity
-
+main_synapse = Synapses(neurons, neurons, **SYNAPSE_PARAMS)
+main_synapse.connect(condition='i!=j', p=0.5)
 main_synapse.s = 'weight_coef * rand()'
-main_synapse_monitor = StateMonitor(main_synapse, ['s'], record=True)
+
+output_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
+output_synapse.connect(p=0.25)
+
+output_synapse.s = 'weight_coef * rand()'
+output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
 
 expected_reward = 0
-# + reward because 0 spiked (reward is negative for samples with answer 1)
-reward_synapse00 = Synapses(output_neurons[0], main_synapse, model='''''',
-                            on_pre='''d_post += reward_value''',
-                            method='exact')
-reward_synapse01 = Synapses(output_neurons[0], input_synapse, model='''''',
-                            on_pre='''d_post += reward_value''',
-                            method='exact')
-reward_synapse00.connect()
-reward_synapse01.connect()
-# - reward because 1 spiked
-reward_synapse10 = Synapses(output_neurons[1], main_synapse, model='''''',
-                            on_pre='''d_post -= reward_value''',
-                            method='exact')
-reward_synapse11 = Synapses(output_neurons[1], input_synapse, model='''''',
-                            on_pre='''d_post -= reward_value''',
-                            method='exact')
-reward_synapse10.connect()
-reward_synapse11.connect()
 
-for i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
-    reward_value = abs(reward_value) if targets[i] == 0 else -abs(reward_value)
+# for target in [input_synapse, main_synapse, output_synapse]:
+# + reward because 0 spiked (reward is negative for samples with answer 1)
+synapse1 = Synapses(output_neurons[0], input_synapse, model='''''',
+                               on_pre='''d_post += reward_value''',
+                               method='exact')
+synapse1.connect()
+# reward_synapses[-1].connect()
+
+# - reward because 1 spiked
+synapse2 = Synapses(output_neurons[1], input_synapse, model='''''',
+                               on_pre='''d_post -= reward_value''',
+                               method='exact')
+synapse2.connect()
+synapse3 = Synapses(output_neurons[0], main_synapse, model='''''',
+                               on_pre='''d_post += reward_value''',
+                               method='exact')
+synapse3.connect()
+synapse4 = Synapses(output_neurons[1], main_synapse, model='''''',
+                               on_pre='''d_post -= reward_value''',
+                               method='exact')
+synapse4.connect()
+synapse5 = Synapses(output_neurons[0], output_synapse, model='''''',
+                               on_pre='''d_post += reward_value''',
+                               method='exact')
+synapse5.connect()
+synapse6 = Synapses(output_neurons[1], output_synapse, model='''''',
+                               on_pre='''d_post -= reward_value''',
+                               method='exact')
+synapse6.connect()
+
+post_prediction_inhibitor = Synapses(output_neurons, neurons, model='''''',
+                                    on_pre='''
+                                    v_post = El
+                                    ge = 0
+                                    ''',
+                                    method='exact')
+post_prediction_inhibitor.connect()
+
+post_prediction_inhibitor2 = Synapses(output_neurons, output_neurons, model='''''',
+                                    on_pre='''
+                                    v_post = El
+                                    ge = 0
+                                    ''',
+                                    method='exact')
+post_prediction_inhibitor2.connect()
+
+
+for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
+    reward_value = abs(reward_value) if targets[sample_i] == 0 else -abs(reward_value)
     run(SAMPLE_DURATION)
     output_neurons.rate = 0
     output_neurons.v = OEl
@@ -140,20 +175,20 @@ ax_input.set_ylabel('Input synapse index')
 ax_input.set_title('Input synaptic strengths over time')
 
 # Process main synapse data
-main_synapse_data = main_synapse_monitor.s[:]
-times_main = main_synapse_monitor.t/ms
+out_synapse_data = output_synapse_monitor.s[:]
+times_main = output_synapse_monitor.t / ms
 
-print(f'Weight delta:\n{(main_synapse_data.T[-1] - main_synapse_data.T[0]).reshape(NUM_NEURONS, OUTPUT_NEURONS)}')
+print(f'Weight delta:\n{(out_synapse_data.T[-1] - out_synapse_data.T[0])}')
 
 # Create heatmap for main synapses
-sns.heatmap(main_synapse_data,
+sns.heatmap(out_synapse_data,
             ax=ax_main,
             cmap='viridis',
             xticklabels=False,
             cbar_kws={'label': 'Strength'},
             robust=True)
-ax_main.set_ylabel('Main synapse index')
-ax_main.set_title('Main synaptic strengths over time')
+ax_main.set_ylabel('Output synapse index')
+ax_main.set_title('Output synaptic strengths over time')
 
 # Add spike raster plot
 ax3 = fig.add_subplot(gs[4:])
