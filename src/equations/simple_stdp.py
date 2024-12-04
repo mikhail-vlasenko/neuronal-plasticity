@@ -21,10 +21,10 @@ dApost *= gmax
 dApre *= gmax
 
 ## Dopamine signaling
-tauc = 1000*ms  # very slow decay of eligibility trace
-taud = 200*ms
+tauc = 50*ms  # very slow decay of eligibility trace
+taud = 25*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
-epsilon_dopa = 5e-3
+epsilon_dopa = 1e-2
 
 NEURON_MODEL = '''
 dv/dt = (ge * (Ee-v) + El - v) / taum : volt (unless refractory)
@@ -77,7 +77,7 @@ OUTPUT_NEURON_PARAMS = {
         v = vr
         rate = 0
         ''',  # Reset both v and rate
-    'refractory': '20*ms',
+    'refractory': '5*ms',
     'method': 'euler'
 }
 

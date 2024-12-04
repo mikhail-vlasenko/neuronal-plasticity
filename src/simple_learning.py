@@ -9,7 +9,7 @@ from src.equations.simple_stdp import *
 from src.input_from_csv import csv_input_neurons
 
 
-np.random.seed(3)
+np.random.seed(1)
 
 NUM_NEURONS = 32
 OUTPUT_NEURONS = 2
@@ -17,8 +17,8 @@ SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 4
 OUTPUT_NEURON_PARAMS['refractory'] = SAMPLE_DURATION * 0.9
 epochs = 4
-weight_coef = 0.2
-reward_value = 5e-3  # epsilon_dopa
+weight_coef = 0.3
+reward_value = epsilon_dopa
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
@@ -70,6 +70,9 @@ for target in [input_synapse, main_synapse, output_synapse]:
                                method='exact'))
     reward_synapses[-1].connect()
 
+dopamine_monitor = StateMonitor(input_synapse, ['d'], record=[0])
+monitors.append(dopamine_monitor)
+
 post_prediction_inhibitors = []
 for target in [neurons, output_neurons]:
     post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
@@ -98,45 +101,31 @@ plt.rcParams['figure.figsize'] = [15, 12]  # Made figure taller to accommodate n
 fig = plt.figure(constrained_layout=True, dpi=100)
 gs = fig.add_gridspec(5, 1, height_ratios=[1, 1, 1, 1, 2])
 
+ax0 = fig.add_subplot(gs[0])
+ax0.plot(dopamine_monitor.t / ms, dopamine_monitor.d[0])
+ax0.set_ylabel('Dopamine level')
+ax0.set_title('Dopamine level over time')
 
-def plot_neuron_potential(ax, state_monitor, neuron_idx=0):
-    # Plot potential on the left y-axis
+
+ax1 = fig.add_subplot(gs[1])
+ax12 = ax1.twinx()
+
+# Plot potential on the left y-axis
+for neuron_idx in range(2):
     sns.lineplot(x=state_monitor.t / ms,
                  y=state_monitor.v[neuron_idx] / mV,
-                 color='black', ax=ax, label='Potential')
-    ax.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
-    ax.set_xlim([0, simulation_duration / ms])
-    ax.set_ylabel('Post-neuron\npotential v(t) (mV)')
-    ax.set_ylim([-80, -40])
-
-    # Check if rate is available in state_monitor
-    if hasattr(state_monitor, 'rate'):
-        # Create twin axis for rate
-        ax2 = ax.twinx()
-
-        # Plot rate on the right y-axis
-        sns.lineplot(x=state_monitor.t / ms,
-                     y=state_monitor.rate[neuron_idx] / (mV / second),
-                     color='blue', ax=ax2, label='Rate')
-        ax2.set_ylabel('Rate (mV/s)', color='blue')
-        ax2.tick_params(axis='y', labelcolor='blue')
-
-        # Combine legends from both axes
-        lines1, labels1 = ax.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
-        ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
-
-        # Remove the original legend if it exists
-        if ax.get_legend():
-            ax.get_legend().remove()
-    else:
-        # If no rate data, just show legend for potential
-        ax.legend(loc='upper right')
-
-    return ax
-
-plot_neuron_potential(fig.add_subplot(gs[0]), state_monitor, neuron_idx=0)
-plot_neuron_potential(fig.add_subplot(gs[1]), state_monitor, neuron_idx=1)
+                 ax=ax1, label='Potential')
+    sns.lineplot(x=state_monitor.t / ms,
+                 y=state_monitor.rate[neuron_idx] / (mV / second),
+                 color='blue', ax=ax12, label='Rate')
+ax1.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
+ax1.set_xlim([0, simulation_duration / ms])
+ax1.set_ylabel('Output neuron\npotential v(t) (mV)')
+ax1.set_ylim([-80, -40])
+ax12.set_ylabel('Rate (mV/s)', color='blue')
+ax12.tick_params(axis='y', labelcolor='blue')
+ax12.legend(loc='upper right')
+ax1.legend(loc='upper left')
 
 # Plot synaptic strengths as heatmaps
 ax_input = fig.add_subplot(gs[2])
