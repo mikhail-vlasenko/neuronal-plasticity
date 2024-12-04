@@ -10,9 +10,9 @@ from omegaconf import DictConfig
 from omegaconf import OmegaConf
 import os
 import logging
-import brian2cuda
-
-set_device("cuda_standalone")
+# import brian2cuda
+#
+# set_device("cuda_standalone")
 
 defaultclock.dt = 0.1*ms # Time resolution of the simulation
 np.random.seed(net_dict['Seed']) 

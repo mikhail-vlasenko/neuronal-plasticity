@@ -285,15 +285,28 @@ class Network_main:
         """ Calculates and prints mean firing rates in spikes/s for each population.
 
         """
-        avg_firing_rates = pd.DataFrame(columns=['Population', 'Avg Firing Rate Hz'])
-        avg_firing_rates_path = os.path.join(metrics_dir, 'avg_firing_rates.csv')
-        for i in range(self.num_pops):
-            mean_rate = self.spike_mon[i].num_spikes/(self.net_dict['num_neurons'][i]*t_sim)
-            self.log.info(f"Mean rate of population {self.net_dict['populations'][i]}: {mean_rate:.2f} Hz")
+        stats_path = os.path.join(metrics_dir, 'firing_stats.csv')
 
-            new_row = [self.net_dict['populations'][i], f'{mean_rate:.2f}']
-            avg_firing_rates.loc[len(avg_firing_rates)] = new_row
-            avg_firing_rates.to_csv(avg_firing_rates_path, index=False)       
+        stats_list = []
+        for i in range(self.num_pops):
+            pop_name = self.net_dict['populations'][i]
+            num_neurons = self.net_dict['num_neurons'][i]
+
+            # Calculate individual firing rates
+            spike_counts = pd.Series(np.bincount(
+                self.spike_mon[i].i,
+                minlength=num_neurons
+            ))
+            rates = spike_counts / t_sim  # Hz
+
+            for rate in rates:
+                stats_list.append({
+                    'Population': pop_name,
+                    'firing_rate': rate
+                })
+
+        # Save all stats to one file
+        pd.DataFrame(stats_list).to_csv(stats_path, index=False)
 
     def write_data(self, spike_times_dir):
         """ Creates files with spike data.
