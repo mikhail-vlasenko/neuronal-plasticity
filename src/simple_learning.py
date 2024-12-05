@@ -9,16 +9,18 @@ from src.equations.simple_stdp import *
 from src.input_from_csv import csv_input_neurons
 
 
-np.random.seed(1)
+prefs.codegen.target = "numpy"
+
+np.random.seed(3)
 
 NUM_NEURONS = 32
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 4
-OUTPUT_NEURON_PARAMS['refractory'] = SAMPLE_DURATION * 0.9
-epochs = 4
+epochs = 8
 weight_coef = 0.3
-reward_value = epsilon_dopa
+
+expected_reward = 0
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
@@ -41,7 +43,7 @@ input_synapse = Synapses(input_neurons, neurons, **SYNAPSE_PARAMS)
 for input_idx in range(input_dim):
     input_synapse.connect(i=input_idx, j=[2 * input_idx, 2 * input_idx + 1])
 
-input_synapse.s = 1
+input_synapse.s = 0.75
 input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
 
 main_synapse = Synapses(neurons, neurons, **SYNAPSE_PARAMS)
@@ -55,18 +57,21 @@ output_synapse.s = 'weight_coef * rand()'
 output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
 monitors += [input_synapse_monitor, output_synapse_monitor]
 
-expected_reward = 0
 reward_synapses = []
 for target in [input_synapse, main_synapse, output_synapse]:
     # + reward because 0 spiked (reward is negative for samples with answer 1)
     reward_synapses.append(Synapses(output_neurons[0], target, model='''''',
-                               on_pre='''d_post += reward_value''',
+                               on_pre='''
+                               d_post += (reward_value - expected_reward_pre)
+                               ''',
                                method='exact'))
     reward_synapses[-1].connect()
 
     # - reward because 1 spiked
     reward_synapses.append(Synapses(output_neurons[1], target, model='''''',
-                               on_pre='''d_post -= reward_value''',
+                               on_pre='''
+                               d_post -= (reward_value - expected_reward_pre)
+                               ''',
                                method='exact'))
     reward_synapses[-1].connect()
 
@@ -74,7 +79,7 @@ dopamine_monitor = StateMonitor(input_synapse, ['d'], record=[0])
 monitors.append(dopamine_monitor)
 
 post_prediction_inhibitors = []
-for target in [neurons, output_neurons]:
+for target in [neurons, output_neurons, input_neurons]:
     post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
                                         on_pre='''
                                         v_post = El
@@ -89,7 +94,8 @@ net = Network(input_neurons, neurons, output_neurons, input_synapse, main_synaps
 
 
 for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
-    reward_value = abs(reward_value) if targets[sample_i] == 0 else -abs(reward_value)
+    print(f'Expected reward: {output_neurons[0].expected_reward}, {output_neurons[1].expected_reward}')
+    reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
     output_neurons.v = OEl
@@ -108,6 +114,7 @@ gs = fig.add_gridspec(5, 1, height_ratios=[1, 1, 1, 1, 2])
 ax0 = fig.add_subplot(gs[0])
 ax0.plot(dopamine_monitor.t / ms, dopamine_monitor.d[0])
 ax0.set_xlim([0, simulation_duration / ms])
+ax0.set_xticklabels([])
 ax0.set_ylabel('Dopamine level')
 ax0.set_title('Dopamine level over time')
 

@@ -8,6 +8,8 @@ vr = -60*mV  # reset potential
 El = -70*mV  # resting potential
 OEl = -74*mV  # resting potential for output neurons
 taue = 5*ms
+tauadapt = 50*ms
+v_adaptation = 0*mV
 output_neuron_rate_growth = 0.
 
 ## STDP
@@ -25,6 +27,8 @@ tauc = 50*ms  # very slow decay of eligibility trace
 taud = 25*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
 epsilon_dopa = 1e-2
+
+expected_reward_change_rate = 0.25
 
 NEURON_MODEL = '''
 dv/dt = (ge * (Ee-v) + El - v) / taum : volt (unless refractory)
@@ -63,10 +67,11 @@ SYNAPSE_PARAMS = {
     # 'delay': 1*ms
 }
 
-
 OUTPUT_NEURON_MODEL = '''
-dv/dt = (ge * (Ee-v) + OEl - v + rate * volt) / taum : volt
+dv/dt = (ge * (Ee-v) + OEl - v + rate * volt - adaptation) / taum : volt (unless refractory)
 dge/dt = -ge / taue : 1
+dadaptation/dt = -adaptation / tauadapt : volt
+expected_reward : 1
 drate/dt = output_neuron_rate_growth/second : 1  # Grows linearly with time with slope 1/second 
 '''
 
@@ -74,7 +79,9 @@ OUTPUT_NEURON_PARAMS = {
     'model': OUTPUT_NEURON_MODEL,
     'threshold': 'v > vt',
     'reset': '''
-        v = vr
+        expected_reward += expected_reward_change_rate * (reward_value - expected_reward)
+        adaptation += v_adaptation
+        v = OEl
         rate = 0
         ''',  # Reset both v and rate
     'refractory': '5*ms',
