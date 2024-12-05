@@ -9,7 +9,7 @@ from src.equations.simple_stdp import *
 from src.input_from_csv import csv_input_neurons
 
 
-prefs.codegen.target = "numpy"
+# prefs.codegen.target = "numpy"
 
 np.random.seed(3)
 
@@ -17,10 +17,9 @@ NUM_NEURONS = 32
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 4
-epochs = 8
-weight_coef = 0.3
-
-expected_reward = 0
+epochs = 16
+weight_coef = 0.6
+connection_probability = 0.25
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
@@ -47,11 +46,11 @@ input_synapse.s = 0.75
 input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
 
 main_synapse = Synapses(neurons, neurons, **SYNAPSE_PARAMS)
-main_synapse.connect(condition='i!=j', p=0.5)
+main_synapse.connect(condition='i!=j', p=connection_probability)
 main_synapse.s = 'weight_coef * rand()'
 
 output_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
-output_synapse.connect(p=0.25)
+output_synapse.connect(p=0.15)
 
 output_synapse.s = 'weight_coef * rand()'
 output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
@@ -94,7 +93,6 @@ net = Network(input_neurons, neurons, output_neurons, input_synapse, main_synaps
 
 
 for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
-    print(f'Expected reward: {output_neurons[0].expected_reward}, {output_neurons[1].expected_reward}')
     reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
@@ -120,29 +118,32 @@ ax0.set_title('Dopamine level over time')
 
 
 ax1 = fig.add_subplot(gs[1])
-ax12 = ax1.twinx()
+plot_rate = False
+if plot_rate:
+    ax12 = ax1.twinx()
 
 # Plot potential on the left y-axis
 for neuron_idx in range(2):
     sns.lineplot(x=state_monitor.t / ms,
                  y=state_monitor.v[neuron_idx] / mV,
                  ax=ax1, label=f'Neuron {neuron_idx}')
-    sns.lineplot(x=state_monitor.t / ms,
-                 y=state_monitor.rate[neuron_idx] / (mV / second),
-                 color='blue', ax=ax12, label='Rate')
+    if plot_rate:
+        sns.lineplot(x=state_monitor.t / ms,
+                     y=state_monitor.rate[neuron_idx] / (mV / second),
+                     color='blue', ax=ax12, label='Rate')
 ax1.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
 ax1.set_xlim([0, simulation_duration / ms])
 ax1.set_ylabel('Output neuron\npotential v(t) (mV)')
 ax1.set_ylim([-80, -40])
-ax12.set_ylabel('Rate (mV/s)', color='blue')
-ax12.tick_params(axis='y', labelcolor='blue')
+if plot_rate:
+    ax12.set_ylabel('Rate (mV/s)', color='blue')
+    ax12.tick_params(axis='y', labelcolor='blue')
 ax1.legend(loc='upper left')
 
 # Plot synaptic strengths as heatmaps
 ax_input = fig.add_subplot(gs[2])
 ax_main = fig.add_subplot(gs[3])
 
-# Process input synapse data
 input_synapse_data = input_synapse_monitor.s[:]
 times_input = input_synapse_monitor.t/ms
 
@@ -155,11 +156,8 @@ sns.heatmap(input_synapse_data,
 ax_input.set_ylabel('Input synapse index')
 ax_input.set_title('Input synaptic strengths over time')
 
-# Process main synapse data
 out_synapse_data = output_synapse_monitor.s[:]
 times_main = output_synapse_monitor.t / ms
-
-print(f'Weight delta:\n{(out_synapse_data.T[-1] - out_synapse_data.T[0])}')
 
 # Create heatmap for main synapses
 sns.heatmap(out_synapse_data,
