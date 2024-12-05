@@ -102,23 +102,30 @@ for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
     neurons.ge = 0
 
 # Visualisation
+plot_from = simulation_duration / ms - 1000
+plot_heatmaps = False
+plot_rate = False
+
 sns.set_style("whitegrid")
-plt.rcParams['figure.figsize'] = [15, 12]  # Made figure taller to accommodate new plot
+plt.rcParams['figure.figsize'] = [15, 12]
 
 # Create figure with custom layout
 fig = plt.figure(constrained_layout=True, dpi=100)
-gs = fig.add_gridspec(5, 1, height_ratios=[1, 1, 1, 1, 2])
+if plot_heatmaps:
+    height_ratios=[1, 1, 1, 1, 2]
+else:
+    height_ratios=[1, 1, 2]
+gs = fig.add_gridspec(len(height_ratios), 1, height_ratios=height_ratios)
 
 ax0 = fig.add_subplot(gs[0])
 ax0.plot(dopamine_monitor.t / ms, dopamine_monitor.d[0])
-ax0.set_xlim([0, simulation_duration / ms])
+ax0.set_xlim([plot_from, simulation_duration / ms])
 ax0.set_xticklabels([])
 ax0.set_ylabel('Dopamine level')
 ax0.set_title('Dopamine level over time')
 
 
 ax1 = fig.add_subplot(gs[1])
-plot_rate = False
 if plot_rate:
     ax12 = ax1.twinx()
 
@@ -132,7 +139,7 @@ for neuron_idx in range(2):
                      y=state_monitor.rate[neuron_idx] / (mV / second),
                      color='blue', ax=ax12, label='Rate')
 ax1.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
-ax1.set_xlim([0, simulation_duration / ms])
+ax1.set_xlim([plot_from, simulation_duration / ms])
 ax1.set_ylabel('Output neuron\npotential v(t) (mV)')
 ax1.set_ylim([-80, -40])
 if plot_rate:
@@ -140,36 +147,30 @@ if plot_rate:
     ax12.tick_params(axis='y', labelcolor='blue')
 ax1.legend(loc='upper left')
 
-# Plot synaptic strengths as heatmaps
-ax_input = fig.add_subplot(gs[2])
-ax_main = fig.add_subplot(gs[3])
+if plot_heatmaps:
+    ax_input = fig.add_subplot(gs[2])
+    ax_main = fig.add_subplot(gs[3])
 
-input_synapse_data = input_synapse_monitor.s[:]
-times_input = input_synapse_monitor.t/ms
+    input_synapse_data = input_synapse_monitor.s[:]
+    sns.heatmap(input_synapse_data,
+                ax=ax_input,
+                cmap='viridis',
+                xticklabels=False,
+                cbar_kws={'label': 'Strength'})
+    ax_input.set_ylabel('Input synapse index')
+    ax_input.set_title('Input synaptic strengths over time')
 
-# Create heatmap for input synapses
-sns.heatmap(input_synapse_data,
-            ax=ax_input,
-            cmap='viridis',
-            xticklabels=False,
-            cbar_kws={'label': 'Strength'})
-ax_input.set_ylabel('Input synapse index')
-ax_input.set_title('Input synaptic strengths over time')
-
-out_synapse_data = output_synapse_monitor.s[:]
-times_main = output_synapse_monitor.t / ms
-
-# Create heatmap for main synapses
-sns.heatmap(out_synapse_data,
-            ax=ax_main,
-            cmap='viridis',
-            xticklabels=False,
-            cbar_kws={'label': 'Strength'})
-ax_main.set_ylabel('Output synapse index')
-ax_main.set_title('Output synaptic strengths over time')
+    out_synapse_data = output_synapse_monitor.s[:]
+    sns.heatmap(out_synapse_data,
+                ax=ax_main,
+                cmap='viridis',
+                xticklabels=False,
+                cbar_kws={'label': 'Strength'})
+    ax_main.set_ylabel('Output synapse index')
+    ax_main.set_title('Output synaptic strengths over time')
 
 # Add spike raster plot
-ax3 = fig.add_subplot(gs[4:])
+ax3 = fig.add_subplot(gs[-1])
 ax3.scatter(input_monitor.t/ms, input_monitor.i, c='blue', label='Input neurons', s=20)
 
 # Plot spikes for middle layer neurons
@@ -181,7 +182,7 @@ ax3.scatter(output_monitor.t/ms, output_monitor.i + input_dim + NUM_NEURONS, c='
 ax3.set_xlabel('Time (ms)')
 ax3.set_ylabel('Neuron index')
 ax3.legend()
-ax3.set_xlim([-0.02, simulation_duration/ms])
+ax3.set_xlim([plot_from, simulation_duration/ms])
 ax3.set_ylim([-1, input_dim + NUM_NEURONS + OUTPUT_NEURONS])
 
 plt.savefig('simple_learning.png')
