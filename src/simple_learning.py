@@ -80,6 +80,7 @@ for target in [neurons, output_neurons]:
                                         v_post = El
                                         ge = 0
                                         ''',
+                                        delay=1*ms,
                                         method='exact'))
     post_prediction_inhibitors[-1].connect()
 
@@ -92,6 +93,9 @@ for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
     output_neurons.v = OEl
+    output_neurons.ge = 0
+    neurons.v = El
+    neurons.ge = 0
 
 # Visualisation
 sns.set_style("whitegrid")
@@ -103,6 +107,7 @@ gs = fig.add_gridspec(5, 1, height_ratios=[1, 1, 1, 1, 2])
 
 ax0 = fig.add_subplot(gs[0])
 ax0.plot(dopamine_monitor.t / ms, dopamine_monitor.d[0])
+ax0.set_xlim([0, simulation_duration / ms])
 ax0.set_ylabel('Dopamine level')
 ax0.set_title('Dopamine level over time')
 
@@ -114,7 +119,7 @@ ax12 = ax1.twinx()
 for neuron_idx in range(2):
     sns.lineplot(x=state_monitor.t / ms,
                  y=state_monitor.v[neuron_idx] / mV,
-                 ax=ax1, label='Potential')
+                 ax=ax1, label=f'Neuron {neuron_idx}')
     sns.lineplot(x=state_monitor.t / ms,
                  y=state_monitor.rate[neuron_idx] / (mV / second),
                  color='blue', ax=ax12, label='Rate')
@@ -124,7 +129,6 @@ ax1.set_ylabel('Output neuron\npotential v(t) (mV)')
 ax1.set_ylim([-80, -40])
 ax12.set_ylabel('Rate (mV/s)', color='blue')
 ax12.tick_params(axis='y', labelcolor='blue')
-ax12.legend(loc='upper right')
 ax1.legend(loc='upper left')
 
 # Plot synaptic strengths as heatmaps
@@ -140,8 +144,7 @@ sns.heatmap(input_synapse_data,
             ax=ax_input,
             cmap='viridis',
             xticklabels=False,
-            cbar_kws={'label': 'Strength'},
-            robust=True)
+            cbar_kws={'label': 'Strength'})
 ax_input.set_ylabel('Input synapse index')
 ax_input.set_title('Input synaptic strengths over time')
 
@@ -156,8 +159,7 @@ sns.heatmap(out_synapse_data,
             ax=ax_main,
             cmap='viridis',
             xticklabels=False,
-            cbar_kws={'label': 'Strength'},
-            robust=True)
+            cbar_kws={'label': 'Strength'})
 ax_main.set_ylabel('Output synapse index')
 ax_main.set_title('Output synaptic strengths over time')
 
