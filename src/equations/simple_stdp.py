@@ -12,6 +12,9 @@ tauadapt = 50*ms
 v_adaptation = 0*mV
 output_neuron_rate_growth = 0.
 
+## Noise
+noise_sigma = 1*mV
+
 ## STDP
 taupre = 20*ms
 taupost = taupre
@@ -31,7 +34,7 @@ epsilon_dopa = 1e-2
 expected_reward_change_rate = 0.25
 
 NEURON_MODEL = '''
-dv/dt = (ge * (Ee-v) + El - v) / taum : volt (unless refractory)
+dv/dt = (ge * (Ee-v) + El - v) / taum + noise_sigma*sqrt(2/taum)*xi : volt (unless refractory)
 dge/dt = -ge / taue : 1
 '''
 

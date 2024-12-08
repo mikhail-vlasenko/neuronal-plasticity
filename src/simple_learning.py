@@ -1,5 +1,6 @@
 import math
 
+from tqdm import tqdm
 from brian2 import *
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -17,9 +18,10 @@ NUM_NEURONS = 32
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 4
-epochs = 16
+epochs = 32
 weight_coef = 0.6
-connection_probability = 0.25
+hidden_connection_avg = 10
+in_out_connection_avg = 4
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
@@ -38,19 +40,17 @@ state_monitor = StateMonitor(output_neurons, ['v', 'rate'], record=[0, 1])
 monitors = [input_monitor, neuron_monitor, output_monitor, state_monitor]
 
 input_synapse = Synapses(input_neurons, neurons, **SYNAPSE_PARAMS)
-# connect input to 2 of the "main" neurons
-for input_idx in range(input_dim):
-    input_synapse.connect(i=input_idx, j=[2 * input_idx, 2 * input_idx + 1])
+input_synapse.connect(p=in_out_connection_avg / NUM_NEURONS)
 
 input_synapse.s = 0.75
 input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
 
 main_synapse = Synapses(neurons, neurons, **SYNAPSE_PARAMS)
-main_synapse.connect(condition='i!=j', p=connection_probability)
+main_synapse.connect(condition='i!=j', p=hidden_connection_avg / NUM_NEURONS)
 main_synapse.s = 'weight_coef * rand()'
 
 output_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
-output_synapse.connect(p=0.15)
+output_synapse.connect(p=in_out_connection_avg / NUM_NEURONS)
 
 output_synapse.s = 'weight_coef * rand()'
 output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
@@ -92,7 +92,7 @@ net = Network(input_neurons, neurons, output_neurons, input_synapse, main_synaps
               *monitors, *reward_synapses, *post_prediction_inhibitors)
 
 
-for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
+for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
     reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
@@ -103,6 +103,7 @@ for sample_i in range(math.floor(simulation_duration/SAMPLE_DURATION)):
 
 # Visualisation
 plot_from = simulation_duration / ms - 1000
+plot_from = 0
 plot_heatmaps = False
 plot_rate = False
 
