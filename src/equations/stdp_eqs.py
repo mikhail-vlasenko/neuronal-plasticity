@@ -37,7 +37,7 @@ taud = 25*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
 epsilon_dopa = 1e-2
 
-expected_reward_change_rate = 0.1
+expected_reward_change_rate = 0.25
 
 NEURON_MODEL = '''
 dv/dt = (ge * (Ee-v) + El - v) / taum + noise_sigma*sqrt(2/taum)*xi : volt (unless refractory)
@@ -92,7 +92,7 @@ SYNAPSE_PARAMS = {
     'on_pre': _synapse_on_pre + (_homeostasis_pre if homeostasis else ''),
     'on_post': _synapse_on_post + (_homeostasis_post if homeostasis else ''),
     'method': 'euler',
-    # 'delay': 1*ms
+    'delay': 1*ms
 }
 
 OUTPUT_NEURON_MODEL = '''
@@ -112,15 +112,16 @@ OUTPUT_NEURON_PARAMS = {
         v = OEl
         rate = 0
         ''',  # Reset both v and rate
-    'refractory': '10*ms',
+    'refractory': '5*ms',
     'method': 'euler'
 }
 
-# DOPAMINE_NEURON_PARAMS = {
-#     'model': 'dv/dt = (vr-v)/taum : volt',
-#     'threshold': 'v>(vr+1*mV)',
-#     'reset': 'v = vr',
-#     'refractory': '5*ms',
-#     'method': 'exact'
-# }
-
+def expected_reward_merge(expected):
+    """
+    Takes rewards from two output neurons, where expected[0] is the expected reward for the first neuron.
+    expected[0] is positive if the first neuron is predicting well.
+    expected[1] is negative if the second neuron is predicting well.
+    Returns two new expectations by combining the success statistics of both neurons.
+    """
+    combined = (expected[0] - expected[1]) / 2
+    return combined, -combined

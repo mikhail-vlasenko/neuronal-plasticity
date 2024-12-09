@@ -10,7 +10,7 @@ class PlottingParams:
     plot_from: int = 0
     plot_heatmaps: bool = True
     plot_adaptation: bool = True
-    minimal_reporting: bool = False
+    minimal_reporting: bool = True
     xlim: list = None
 
     def update(self):
@@ -63,15 +63,25 @@ def plot_output_potentials(ax, output_state_monitor, vt):
         ax12.tick_params(axis='y', labelcolor='blue')
     ax.legend(loc='upper left')
 
-def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor):
-    input_synapse_data = input_synapse_monitor.s[:]
-    sns.heatmap(input_synapse_data,
-                ax=ax_input,
-                cmap='viridis',
-                xticklabels=False,
-                cbar_kws={'label': 'Strength'})
-    ax_input.set_ylabel('Input synapse index')
-    ax_input.set_title('Input synaptic strengths over time')
+def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor, eligibility_trace=False):
+    if eligibility_trace:
+        input_synapse_data = output_synapse_monitor.c[:]
+        sns.heatmap(input_synapse_data,
+                    ax=ax_input,
+                    cmap='viridis',
+                    xticklabels=False,
+                    cbar_kws={'label': 'Eligibility trace'})
+        ax_input.set_ylabel('Output synapse index')
+        ax_input.set_title('Output eligibility traces over time')
+    else:
+        input_synapse_data = input_synapse_monitor.s[:]
+        sns.heatmap(input_synapse_data,
+                    ax=ax_input,
+                    cmap='viridis',
+                    xticklabels=False,
+                    cbar_kws={'label': 'Strength'})
+        ax_input.set_ylabel('Input synapse index')
+        ax_input.set_title('Input synaptic strengths over time')
 
     out_synapse_data = output_synapse_monitor.s[:]
     sns.heatmap(out_synapse_data,

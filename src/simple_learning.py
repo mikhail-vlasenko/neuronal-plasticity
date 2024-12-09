@@ -21,18 +21,16 @@ NUM_INHIBITORY = 8
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 3
-epochs = 16
+epochs = 32
 wait_durations = 0
 weight_coef = 0.4
 hidden_connection_avg = 5
 inhibitory_connection_avg = 8
 in_connection_avg = 4
 
-minimal_reporting = True
-
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES,
-    wait_durations=wait_durations
+    wait_durations=wait_durations, blasting=False
 )
 input_monitor = SpikeMonitor(input_neurons)
 
@@ -71,7 +69,7 @@ inhib_synapse.s = 'inhib_s_initial * rand()'
 output_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
 output_synapse.connect(p=hidden_connection_avg / NUM_NEURONS)
 output_synapse.s = 'weight_coef * rand()'
-output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
+output_synapse_monitor = StateMonitor(output_synapse, ['s', 'c'], record=True)
 
 reward_synapses = []
 for target in [input_synapse, main_synapse, output_synapse]:
@@ -93,20 +91,16 @@ for target in [input_synapse, main_synapse, output_synapse]:
 
 dopamine_monitor = StateMonitor(input_synapse, ['d'], record=[0])
 monitors = [input_monitor, neuron_monitor, inhibitory_monitor, output_monitor, dopamine_monitor]
-if not minimal_reporting:
+if not PLOTTING_PARAMS.minimal_reporting:
     monitors += [output_state_monitor, input_synapse_monitor, output_synapse_monitor]
 
 post_prediction_inhibitors = []
-post_prediction_inhibitors.append(Synapses(output_neurons, neurons, model='''''',
-                                    on_pre='''ge_post -= 1''',
-                                    # delay=2*ms,
-                                    method='exact'))
-post_prediction_inhibitors[-1].connect()
-post_prediction_inhibitors.append(Synapses(output_neurons, output_neurons, model='''''',
-                                    on_pre='''ge_post -= 3''',
-                                    # delay=2*ms,
-                                    method='exact'))
-post_prediction_inhibitors[-1].connect()
+for target, value in zip([neurons, output_neurons], [1, 3]):
+    post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
+                                        on_pre=f'''ge_post -= {value}''',
+                                        # delay=2*ms,
+                                        method='exact'))
+    post_prediction_inhibitors[-1].connect()
 
 net = Network(input_neurons, neurons, inhibitory_neurons, output_neurons,
               input_synapse, main_synapse, to_inhib_synapse, inhib_synapse, output_synapse,
@@ -114,10 +108,12 @@ net = Network(input_neurons, neurons, inhibitory_neurons, output_neurons,
 
 
 for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
+    # assign negative reward to the second output neuron. its synapses subtract the reward
     reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
-    output_neurons.expected_reward = np.array(output_neurons.expected_reward).mean()
+    output_neurons.expected_reward[0], output_neurons.expected_reward[1] = (
+        expected_reward_merge(output_neurons.expected_reward))
     # for reset_neurons in [output_neurons, neurons, inhibitory_neurons]:
     #     reset_neurons.v = El
     #     reset_neurons.ge = 0
@@ -125,8 +121,7 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
 
 # Visualisation
 PLOTTING_PARAMS.simulation_duration = simulation_duration
-PLOTTING_PARAMS.minimal_reporting = minimal_reporting
-# PLOTTING_PARAMS.plot_from = max(0, simulation_duration / ms - 4000)
+PLOTTING_PARAMS.plot_from = max(0, simulation_duration / ms - 4000)
 PLOTTING_PARAMS.update()
 
 fig, gs = get_plots_iterator()
@@ -138,7 +133,7 @@ if not PLOTTING_PARAMS.minimal_reporting:
 if PLOTTING_PARAMS.plot_heatmaps and not PLOTTING_PARAMS.minimal_reporting:
     ax_input = fig.add_subplot(gs.__next__())
     ax_output = fig.add_subplot(gs.__next__())
-    plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor)
+    plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor, eligibility_trace=True)
 
 spike_raster(fig.add_subplot(gs.__next__()), input_monitor, neuron_monitor, inhibitory_monitor, output_monitor)
 
