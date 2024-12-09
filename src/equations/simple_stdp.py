@@ -57,7 +57,7 @@ dApost/dt = -Apost / taupost : 1 (event-driven)
 SYNAPSE_PARAMS = {
     'model': SYNAPSE_MODEL,
     'on_pre': '''
-        s = clip(s, -max_strength, max_strength)
+        s = clip(s, 0, max_strength)
         ge += s
         Apre += dApre
         c = clip(c + Apost, -gmax, gmax)

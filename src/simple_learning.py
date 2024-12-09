@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.equations.inhibitory_homeostasis import *
 from src.equations.simple_stdp import *
 from src.input_from_csv import csv_input_neurons
 
@@ -15,16 +16,20 @@ from src.input_from_csv import csv_input_neurons
 np.random.seed(3)
 
 NUM_NEURONS = 32
+NUM_INHIBITORY = 8
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 4
-epochs = 32
-weight_coef = 0.6
+epochs = 16
+wait_durations = 0
+weight_coef = 0.3
 hidden_connection_avg = 10
+inhibitory_connection_avg = 8
 in_out_connection_avg = 4
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
-    '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES
+    '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES,
+    wait_durations=wait_durations
 )
 input_monitor = SpikeMonitor(input_neurons)
 
@@ -32,12 +37,16 @@ neurons = NeuronGroup(NUM_NEURONS, **NEURON_PARAMS)
 neuron_monitor = SpikeMonitor(neurons)
 neurons.v = El
 
+inhibitory_neurons = NeuronGroup(NUM_INHIBITORY, **NEURON_PARAMS)
+inhibitory_monitor = SpikeMonitor(inhibitory_neurons)
+inhibitory_neurons.v = El
+
 output_neurons = NeuronGroup(OUTPUT_NEURONS, **OUTPUT_NEURON_PARAMS)
 output_neurons.v = OEl
 
 output_monitor = SpikeMonitor(output_neurons)
 state_monitor = StateMonitor(output_neurons, ['v', 'rate'], record=[0, 1])
-monitors = [input_monitor, neuron_monitor, output_monitor, state_monitor]
+monitors = [input_monitor, neuron_monitor, inhibitory_monitor, output_monitor, state_monitor]
 
 input_synapse = Synapses(input_neurons, neurons, **SYNAPSE_PARAMS)
 input_synapse.connect(p=in_out_connection_avg / NUM_NEURONS)
@@ -48,6 +57,14 @@ input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
 main_synapse = Synapses(neurons, neurons, **SYNAPSE_PARAMS)
 main_synapse.connect(condition='i!=j', p=hidden_connection_avg / NUM_NEURONS)
 main_synapse.s = 'weight_coef * rand()'
+
+to_inhib_synapse = Synapses(neurons, inhibitory_neurons, **SYNAPSE_PARAMS)
+to_inhib_synapse.connect(p=inhibitory_connection_avg / NUM_NEURONS)
+to_inhib_synapse.s = 'weight_coef * rand()'
+
+inhib_synapse = Synapses(inhibitory_neurons, neurons, **INHIBITORY_SYNAPSE_PARAMS)
+inhib_synapse.connect(p=inhibitory_connection_avg / NUM_NEURONS)
+inhib_synapse.s = 'inhib_s_initial * rand()'
 
 output_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
 output_synapse.connect(p=in_out_connection_avg / NUM_NEURONS)
@@ -78,7 +95,7 @@ dopamine_monitor = StateMonitor(input_synapse, ['d'], record=[0])
 monitors.append(dopamine_monitor)
 
 post_prediction_inhibitors = []
-for target in [neurons, output_neurons, input_neurons]:
+for target in [output_neurons, input_neurons]:
     post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
                                         on_pre='''
                                         v_post = El
@@ -88,7 +105,8 @@ for target in [neurons, output_neurons, input_neurons]:
                                         method='exact'))
     post_prediction_inhibitors[-1].connect()
 
-net = Network(input_neurons, neurons, output_neurons, input_synapse, main_synapse, output_synapse,
+net = Network(input_neurons, neurons, inhibitory_neurons, output_neurons,
+              input_synapse, main_synapse, to_inhib_synapse, inhib_synapse, output_synapse,
               *monitors, *reward_synapses, *post_prediction_inhibitors)
 
 
@@ -96,10 +114,9 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
     reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
-    output_neurons.v = OEl
-    output_neurons.ge = 0
-    neurons.v = El
-    neurons.ge = 0
+    for reset_neurons in [output_neurons, neurons, inhibitory_neurons]:
+        reset_neurons.v = El
+        reset_neurons.ge = 0
 
 # Visualisation
 plot_from = simulation_duration / ms - 1000
@@ -172,19 +189,19 @@ if plot_heatmaps:
 
 # Add spike raster plot
 ax3 = fig.add_subplot(gs[-1])
-ax3.scatter(input_monitor.t/ms, input_monitor.i, c='blue', label='Input neurons', s=20)
+ax3.scatter(input_monitor.t/ms, input_monitor.i, c='blue', label='Input', s=20)
 
-# Plot spikes for middle layer neurons
-ax3.scatter(neuron_monitor.t/ms, neuron_monitor.i + input_dim, c='green', label='Hidden neurons', s=20)
+ax3.scatter(neuron_monitor.t/ms, neuron_monitor.i + input_dim, c='green', label='Hidden', s=20)
 
-# Plot spikes for output neurons
-ax3.scatter(output_monitor.t/ms, output_monitor.i + input_dim + NUM_NEURONS, c='red', label='Output neurons', s=20)
+ax3.scatter(inhibitory_monitor.t/ms, inhibitory_monitor.i + input_dim + NUM_NEURONS, c='orange', label='Inhibitory', s=20)
+
+ax3.scatter(output_monitor.t/ms, output_monitor.i + input_dim + NUM_NEURONS + NUM_INHIBITORY, c='red', label='Output', s=20)
 
 ax3.set_xlabel('Time (ms)')
 ax3.set_ylabel('Neuron index')
 ax3.legend()
 ax3.set_xlim([plot_from, simulation_duration/ms])
-ax3.set_ylim([-1, input_dim + NUM_NEURONS + OUTPUT_NEURONS])
+ax3.set_ylim([-1, input_dim + NUM_NEURONS + NUM_INHIBITORY + OUTPUT_NEURONS])
 
 plt.savefig('simple_learning.png')
 plt.show()

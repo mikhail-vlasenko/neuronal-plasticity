@@ -5,6 +5,7 @@ import numpy as np
 
 # import brian2cuda
 # set_device("cuda_standalone")
+prefs.codegen.target = "numpy"
 
 # Parameters
 simulation_duration = 6 * second
@@ -20,10 +21,10 @@ taue = 5*ms
 ## STDP
 taupre = 20*ms
 taupost = taupre
-gmax = 1  # todo: what is this?
+gmax = 1  # eligibility trace clipping
 max_strength = 1
 dApre = 1  # this is basically by how much the eligibility trace increases
-dApost = -dApre * taupre / taupost * 1.05
+dApost = -dApre * taupre / taupost * 1.05  # todo: why is there a 1.05?
 dApost *= gmax
 dApre *= gmax
 
@@ -40,14 +41,16 @@ input_indices = array([0,
                        1,
                        0, 1, 1, 0,
                        0, 1, 0, 1,
+                       0, 1, 0, 1,
                        0, 0])
 input_times = array([500,
                      1000,
                      1500, 1550, 2000, 2020,
                      3500, 3510, 4000, 4010,
+                     4200, 4210, 4400, 4410,
                      5500, 5550])*ms
 spike_input = SpikeGeneratorGroup(2, input_indices, input_times)
-dopamine_times = array([1020, 1520, 2050, 3520, 4020])*ms
+dopamine_times = array([1020, 1520, 2050, 3520, 4020, 4220, 4420])*ms
 
 neurons = NeuronGroup(2, '''dv/dt = (ge * (Ee-v) + El - v) / taum : volt
                             dge/dt = -ge / taue : 1''',
