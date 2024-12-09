@@ -121,7 +121,7 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
 
 # Visualisation
 PLOTTING_PARAMS.simulation_duration = simulation_duration
-PLOTTING_PARAMS.plot_from = max(0, simulation_duration / ms - 4000)
+PLOTTING_PARAMS.plot_from = max(0, simulation_duration / ms - 2000)
 PLOTTING_PARAMS.update()
 
 fig, gs = get_plots_iterator()

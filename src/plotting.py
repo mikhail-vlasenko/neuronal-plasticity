@@ -10,7 +10,7 @@ class PlottingParams:
     plot_from: int = 0
     plot_heatmaps: bool = True
     plot_adaptation: bool = True
-    minimal_reporting: bool = True
+    minimal_reporting: bool = False
     xlim: list = None
 
     def update(self):
@@ -64,9 +64,11 @@ def plot_output_potentials(ax, output_state_monitor, vt):
     ax.legend(loc='upper left')
 
 def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor, eligibility_trace=False):
+    xlim = [PLOTTING_PARAMS.xlim[0] * ms / output_synapse_monitor.clock.dt,
+            PLOTTING_PARAMS.xlim[1] * ms / output_synapse_monitor.clock.dt]
     if eligibility_trace:
-        input_synapse_data = output_synapse_monitor.c[:]
-        sns.heatmap(input_synapse_data,
+        eligibility_trace_data = output_synapse_monitor.c[:]
+        sns.heatmap(eligibility_trace_data,
                     ax=ax_input,
                     cmap='viridis',
                     xticklabels=False,
@@ -82,6 +84,7 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
                     cbar_kws={'label': 'Strength'})
         ax_input.set_ylabel('Input synapse index')
         ax_input.set_title('Input synaptic strengths over time')
+    ax_input.set_xlim(xlim)
 
     out_synapse_data = output_synapse_monitor.s[:]
     sns.heatmap(out_synapse_data,
@@ -91,6 +94,7 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
                 cbar_kws={'label': 'Strength'})
     ax_output.set_ylabel('Output synapse index')
     ax_output.set_title('Output synaptic strengths over time')
+    ax_output.set_xlim(xlim)
 
 
 def spike_raster(ax, input_monitor, neuron_monitor, inhibitory_monitor, output_monitor):
