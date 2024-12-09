@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.connectivity_graph import visualize_network_connectivity
 from src.equations.inhibitory_homeostasis import *
 from src.equations.stdp_eqs import *
 from src.input_from_csv import csv_input_neurons
