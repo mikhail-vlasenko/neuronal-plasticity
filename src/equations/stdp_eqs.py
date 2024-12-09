@@ -9,7 +9,7 @@ El = -70*mV  # resting potential
 OEl = -74*mV  # resting potential for output neurons
 taue = 5*ms
 tauadapt = 50*ms
-v_adaptation = 0*mV
+v_adaptation = 5*mV
 output_neuron_rate_growth = 0.
 
 ## Noise
@@ -58,7 +58,7 @@ SYNAPSE_PARAMS = {
     'model': SYNAPSE_MODEL,
     'on_pre': '''
         s = clip(s, 0, max_strength)
-        ge += s
+        ge_post += s
         Apre += dApre
         c = clip(c + Apost, -gmax, gmax)
     ''',
@@ -87,7 +87,7 @@ OUTPUT_NEURON_PARAMS = {
         v = OEl
         rate = 0
         ''',  # Reset both v and rate
-    'refractory': '5*ms',
+    'refractory': '10*ms',
     'method': 'euler'
 }
 

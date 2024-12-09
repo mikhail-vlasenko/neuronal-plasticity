@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.equations.inhibitory_homeostasis import *
-from src.equations.simple_stdp import *
+from src.equations.stdp_eqs import *
 from src.input_from_csv import csv_input_neurons
 
 
 # prefs.codegen.target = "numpy"
 
-np.random.seed(3)
+np.random.seed(0)
 
 NUM_NEURONS = 32
 NUM_INHIBITORY = 8
@@ -22,10 +22,10 @@ SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 4
 epochs = 16
 wait_durations = 0
-weight_coef = 0.3
-hidden_connection_avg = 10
+weight_coef = 0.4
+hidden_connection_avg = 6
 inhibitory_connection_avg = 8
-in_out_connection_avg = 4
+in_connection_avg = 4
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
     '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES,
@@ -45,11 +45,11 @@ output_neurons = NeuronGroup(OUTPUT_NEURONS, **OUTPUT_NEURON_PARAMS)
 output_neurons.v = OEl
 
 output_monitor = SpikeMonitor(output_neurons)
-state_monitor = StateMonitor(output_neurons, ['v', 'rate'], record=[0, 1])
+state_monitor = StateMonitor(output_neurons, ['v', 'adaptation'], record=[0, 1])
 monitors = [input_monitor, neuron_monitor, inhibitory_monitor, output_monitor, state_monitor]
 
 input_synapse = Synapses(input_neurons, neurons, **SYNAPSE_PARAMS)
-input_synapse.connect(p=in_out_connection_avg / NUM_NEURONS)
+input_synapse.connect(p=in_connection_avg / NUM_NEURONS)
 
 input_synapse.s = 0.75
 input_synapse_monitor = StateMonitor(input_synapse, ['s'], record=True)
@@ -67,8 +67,7 @@ inhib_synapse.connect(p=inhibitory_connection_avg / NUM_NEURONS)
 inhib_synapse.s = 'inhib_s_initial * rand()'
 
 output_synapse = Synapses(neurons, output_neurons, **SYNAPSE_PARAMS)
-output_synapse.connect(p=in_out_connection_avg / NUM_NEURONS)
-
+output_synapse.connect(p=hidden_connection_avg / NUM_NEURONS)
 output_synapse.s = 'weight_coef * rand()'
 output_synapse_monitor = StateMonitor(output_synapse, ['s'], record=True)
 monitors += [input_synapse_monitor, output_synapse_monitor]
@@ -95,13 +94,12 @@ dopamine_monitor = StateMonitor(input_synapse, ['d'], record=[0])
 monitors.append(dopamine_monitor)
 
 post_prediction_inhibitors = []
-for target in [output_neurons, input_neurons]:
+for target in [neurons, output_neurons]:
     post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
                                         on_pre='''
-                                        v_post = El
-                                        ge = 0
+                                        ge_post -= 1
                                         ''',
-                                        delay=1*ms,
+                                        delay=2*ms,
                                         method='exact'))
     post_prediction_inhibitors[-1].connect()
 
@@ -114,15 +112,15 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
     reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
-    for reset_neurons in [output_neurons, neurons, inhibitory_neurons]:
-        reset_neurons.v = El
-        reset_neurons.ge = 0
+    # for reset_neurons in [output_neurons, neurons, inhibitory_neurons]:
+    #     reset_neurons.v = El
+    #     reset_neurons.ge = 0
 
 # Visualisation
 plot_from = simulation_duration / ms - 1000
 plot_from = 0
 plot_heatmaps = False
-plot_rate = False
+plot_adaptation = True
 
 sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = [15, 12]
@@ -144,7 +142,7 @@ ax0.set_title('Dopamine level over time')
 
 
 ax1 = fig.add_subplot(gs[1])
-if plot_rate:
+if plot_adaptation:
     ax12 = ax1.twinx()
 
 # Plot potential on the left y-axis
@@ -152,16 +150,16 @@ for neuron_idx in range(2):
     sns.lineplot(x=state_monitor.t / ms,
                  y=state_monitor.v[neuron_idx] / mV,
                  ax=ax1, label=f'Neuron {neuron_idx}')
-    if plot_rate:
+    if plot_adaptation:
         sns.lineplot(x=state_monitor.t / ms,
-                     y=state_monitor.rate[neuron_idx] / (mV / second),
-                     color='blue', ax=ax12, label='Rate')
+                     y=state_monitor.adaptation[neuron_idx] / (mV / second),
+                     color='blue', ax=ax12)
 ax1.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
 ax1.set_xlim([plot_from, simulation_duration / ms])
 ax1.set_ylabel('Output neuron\npotential v(t) (mV)')
 ax1.set_ylim([-80, -40])
-if plot_rate:
-    ax12.set_ylabel('Rate (mV/s)', color='blue')
+if plot_adaptation:
+    ax12.set_ylabel('Adaptation (mV)', color='blue')
     ax12.tick_params(axis='y', labelcolor='blue')
 ax1.legend(loc='upper left')
 
