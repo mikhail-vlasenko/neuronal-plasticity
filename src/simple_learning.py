@@ -14,14 +14,14 @@ from src.plotting import spike_raster, PLOTTING_PARAMS, get_plots_iterator, plot
 
 # prefs.codegen.target = "numpy"
 
-np.random.seed(0)
+np.random.seed(1)
 
 NUM_NEURONS = 32
 NUM_INHIBITORY = 8
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 3
-epochs = 32
+epochs = 128
 wait_durations = 0
 weight_coef = 0.4
 hidden_connection_avg = 5
