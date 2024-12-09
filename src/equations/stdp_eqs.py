@@ -25,6 +25,12 @@ dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
+## Homeostasis
+homeostasis = True
+tau_homeostasis = 1000*ms
+homeostasis_add = 0.05
+homeostasis_subtract = homeostasis_add * 2
+
 ## Dopamine signaling
 tauc = 50*ms  # very slow decay of eligibility trace
 taud = 25*ms
@@ -54,18 +60,37 @@ dApre/dt = -Apre / taupre : 1 (event-driven)
 dApost/dt = -Apost / taupost : 1 (event-driven)
 '''
 
+_homeostasis_model = '''
+dhomeostasis_s/dt = -homeostasis_s / tau_homeostasis : 1 (clock-driven)
+'''
+
+_synapse_on_pre = '''
+    s = clip(s, 0, max_strength)
+    ge_post += s
+    Apre += dApre
+    c = clip(c + Apost, -gmax, gmax)
+'''
+
+_homeostasis_pre = '''
+    homeostasis_s += homeostasis_add
+    homeostasis_s = clip(homeostasis_s, 0, 1)
+    ge_post += homeostasis_s
+'''
+
+_synapse_on_post = '''
+    Apost += dApost
+    c = clip(c + Apre, -gmax, gmax)
+'''
+
+_homeostasis_post = '''
+    homeostasis_s -= homeostasis_subtract
+    homeostasis_s = clip(homeostasis_s, 0, 1)
+'''
+
 SYNAPSE_PARAMS = {
-    'model': SYNAPSE_MODEL,
-    'on_pre': '''
-        s = clip(s, 0, max_strength)
-        ge_post += s
-        Apre += dApre
-        c = clip(c + Apost, -gmax, gmax)
-    ''',
-    'on_post': '''
-        Apost += dApost
-        c = clip(c + Apre, -gmax, gmax)
-    ''',
+    'model': SYNAPSE_MODEL + (_homeostasis_model if homeostasis else ''),
+    'on_pre': _synapse_on_pre + (_homeostasis_pre if homeostasis else ''),
+    'on_post': _synapse_on_post + (_homeostasis_post if homeostasis else ''),
     'method': 'euler',
     # 'delay': 1*ms
 }
