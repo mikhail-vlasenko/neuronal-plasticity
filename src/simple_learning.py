@@ -20,11 +20,11 @@ NUM_NEURONS = 32
 NUM_INHIBITORY = 8
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
-NUM_EXPOSURES = 4
-epochs = 128
+NUM_EXPOSURES = 3
+epochs = 16
 wait_durations = 0
 weight_coef = 0.4
-hidden_connection_avg = 6
+hidden_connection_avg = 5
 inhibitory_connection_avg = 8
 in_connection_avg = 4
 
@@ -97,14 +97,16 @@ if not minimal_reporting:
     monitors += [output_state_monitor, input_synapse_monitor, output_synapse_monitor]
 
 post_prediction_inhibitors = []
-for target in [neurons, output_neurons]:
-    post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
-                                        on_pre='''
-                                        ge_post -= 1
-                                        ''',
-                                        # delay=2*ms,
-                                        method='exact'))
-    post_prediction_inhibitors[-1].connect()
+post_prediction_inhibitors.append(Synapses(output_neurons, neurons, model='''''',
+                                    on_pre='''ge_post -= 1''',
+                                    # delay=2*ms,
+                                    method='exact'))
+post_prediction_inhibitors[-1].connect()
+post_prediction_inhibitors.append(Synapses(output_neurons, output_neurons, model='''''',
+                                    on_pre='''ge_post -= 3''',
+                                    # delay=2*ms,
+                                    method='exact'))
+post_prediction_inhibitors[-1].connect()
 
 net = Network(input_neurons, neurons, inhibitory_neurons, output_neurons,
               input_synapse, main_synapse, to_inhib_synapse, inhib_synapse, output_synapse,
@@ -115,6 +117,7 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
     reward_value = epsilon_dopa if targets[sample_i] == 0 else -epsilon_dopa
     net.run(SAMPLE_DURATION)
     output_neurons.rate = 0
+    output_neurons.expected_reward = np.array(output_neurons.expected_reward).mean()
     # for reset_neurons in [output_neurons, neurons, inhibitory_neurons]:
     #     reset_neurons.v = El
     #     reset_neurons.ge = 0
@@ -123,7 +126,7 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
 # Visualisation
 PLOTTING_PARAMS.simulation_duration = simulation_duration
 PLOTTING_PARAMS.minimal_reporting = minimal_reporting
-PLOTTING_PARAMS.plot_from = simulation_duration / ms - 4000
+# PLOTTING_PARAMS.plot_from = max(0, simulation_duration / ms - 4000)
 PLOTTING_PARAMS.update()
 
 fig, gs = get_plots_iterator()

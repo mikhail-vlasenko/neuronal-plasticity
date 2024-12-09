@@ -33,7 +33,7 @@ def csv_input_neurons(csv_path: str, duration, repeat_for=1, num_exposures=1, wa
                 for i, val in enumerate(input_pattern):
                     if val == 1:
                         indices.append(i)  # Neuron index
-                        times.append((offset + exposure / num_exposures / 2) * pattern_duration + sample_start_offset)
+                        times.append((offset + exposure / num_exposures / 3) * pattern_duration + sample_start_offset)
             offset += 1
             targets.append(row['target'])
 

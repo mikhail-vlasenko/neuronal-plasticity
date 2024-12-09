@@ -57,7 +57,7 @@ def plot_output_potentials(ax, output_state_monitor, vt):
     ax.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
     ax.set_xlim(PLOTTING_PARAMS.xlim)
     ax.set_ylabel('Output neuron\npotential v(t) (mV)')
-    ax.set_ylim([-80, -40])
+    ax.set_ylim([-90, -50])
     if PLOTTING_PARAMS.plot_adaptation:
         ax12.set_ylabel('Adaptation (mV)', color='blue')
         ax12.tick_params(axis='y', labelcolor='blue')

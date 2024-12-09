@@ -18,7 +18,7 @@ noise_sigma = 1*mV
 ## STDP
 taupre = 20*ms
 taupost = taupre
-gmax = 1
+gmax = 0.5
 max_strength = 1
 dApre = 0.1  # this is basically by how much the eligibility trace increases
 dApost = -dApre * taupre / taupost * 1.05
@@ -32,12 +32,12 @@ homeostasis_add = 0.05
 homeostasis_subtract = homeostasis_add * 2
 
 ## Dopamine signaling
-tauc = 50*ms  # very slow decay of eligibility trace
+tauc = 25*ms  # very slow decay of eligibility trace
 taud = 25*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
 epsilon_dopa = 1e-2
 
-expected_reward_change_rate = 0.25
+expected_reward_change_rate = 0.1
 
 NEURON_MODEL = '''
 dv/dt = (ge * (Ee-v) + El - v) / taum + noise_sigma*sqrt(2/taum)*xi : volt (unless refractory)
@@ -96,7 +96,7 @@ SYNAPSE_PARAMS = {
 }
 
 OUTPUT_NEURON_MODEL = '''
-dv/dt = (ge * (Ee-v) + OEl - v + rate * volt - adaptation) / taum : volt (unless refractory)
+dv/dt = (ge * (Ee-v) + OEl - v + rate * volt - adaptation) / taum : volt
 dge/dt = -ge / taue : 1
 dadaptation/dt = -adaptation / tauadapt : volt
 expected_reward : 1
