@@ -15,14 +15,14 @@ from src.plotting import spike_raster, PLOTTING_PARAMS, get_plots_iterator, plot
 
 # prefs.codegen.target = "numpy"
 
-np.random.seed(1)
+np.random.seed(0)
 
-NUM_NEURONS = 32
-NUM_INHIBITORY = 8
+NUM_NEURONS = 64
+NUM_INHIBITORY = 16
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
-NUM_EXPOSURES = 3
-epochs = 128
+NUM_EXPOSURES = 2
+epochs = 2
 wait_durations = 0
 weight_coef = 0.4
 hidden_connection_avg = 5
@@ -30,7 +30,7 @@ inhibitory_connection_avg = 8
 in_connection_avg = 4
 
 input_neurons, targets, input_dim, simulation_duration = csv_input_neurons(
-    '../data/mini_sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES,
+    '../data/sample.csv', duration=SAMPLE_DURATION, repeat_for=epochs, num_exposures=NUM_EXPOSURES,
     wait_durations=wait_durations, blasting=False
 )
 input_monitor = SpikeMonitor(input_neurons)

@@ -10,7 +10,7 @@ class PlottingParams:
     plot_from: int = 0
     plot_heatmaps: bool = True
     plot_adaptation: bool = True
-    minimal_reporting: bool = False
+    minimal_reporting: bool = True
     xlim: list = None
 
     def update(self):
@@ -35,7 +35,8 @@ def get_plots_iterator():
     return fig, iter(fig.add_gridspec(len(height_ratios), 1, height_ratios=height_ratios))
 
 def plot_dopamine(ax, dopamine_monitor):
-    ax.plot(dopamine_monitor.t / ms, dopamine_monitor.d[0])
+    mask = (dopamine_monitor.t / ms >= PLOTTING_PARAMS.plot_from)
+    ax.plot(dopamine_monitor.t[mask] / ms, dopamine_monitor.d[0][mask])
     ax.set_xlim(PLOTTING_PARAMS.xlim)
     ax.set_xticklabels([])
     ax.set_ylabel('Dopamine level')
@@ -98,13 +99,16 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
 
 
 def spike_raster(ax, input_monitor, neuron_monitor, inhibitory_monitor, output_monitor):
-    ax.scatter(input_monitor.t / ms, input_monitor.i,
+    def crop_data(monitor, offset=0):
+        mask = ((monitor.t / ms) >= PLOTTING_PARAMS.plot_from)
+        return monitor.t[mask] / ms, monitor.i[mask] + offset
+    ax.scatter(*crop_data(input_monitor),
                c='blue', label='Input', s=20)
-    ax.scatter(neuron_monitor.t / ms, neuron_monitor.i + (offset := len(input_monitor.source)),
+    ax.scatter(*crop_data(neuron_monitor, offset := len(input_monitor.source)),
                c='green', label='Hidden', s=20)
-    ax.scatter(inhibitory_monitor.t / ms, inhibitory_monitor.i + (offset := offset + len(neuron_monitor.source)),
+    ax.scatter(*crop_data(inhibitory_monitor, offset := offset + len(neuron_monitor.source)),
                c='orange', label='Inhibitory', s=20)
-    ax.scatter(output_monitor.t / ms, output_monitor.i + (offset := offset + len(inhibitory_monitor.source)),
+    ax.scatter(*crop_data(output_monitor, offset := offset + len(inhibitory_monitor.source)),
                c='red', label='Output', s=20)
 
     ax.set_xlabel('Time (ms)')

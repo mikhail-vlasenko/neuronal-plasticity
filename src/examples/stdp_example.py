@@ -21,7 +21,7 @@ taue = 5*ms
 ## STDP
 taupre = 20*ms
 taupost = taupre
-gmax = 1  # eligibility trace clipping
+gmax = 0.5  # eligibility trace clipping
 max_strength = 1
 dApre = 1  # this is basically by how much the eligibility trace increases
 dApost = -dApre * taupre / taupost * 1.05  # todo: why is there a 1.05?
@@ -30,7 +30,7 @@ dApre *= gmax
 
 ## Dopamine signaling
 tauc = 1000*ms  # very slow decay of eligibility trace
-taud = 200*ms
+taud = 100*ms
 taus = 1*ms  # changed from 1, looks like lr? is lr, but prob better to increase eligibility trace for faster learning
 epsilon_dopa = 5e-3
 
@@ -137,7 +137,7 @@ ax1.legend(loc='upper left')
 # Plot 2: Extracellular dopamine
 ax2 = fig.add_subplot(gs[1])
 sns.lineplot(x=synapse_stdp_monitor.t/second,
-            y=synapse_stdp_monitor.d.T.flatten()/gmax,
+            y=synapse_stdp_monitor.d.T.flatten(),
             color='red', ax=ax2)
 ax2.set_xlim([0, simulation_duration/second])
 ax2.set_ylabel('Extracellular\ndopamine d(t)')
@@ -146,7 +146,7 @@ ax2.set_xticks([])
 # Plot 3: Eligibility trace
 ax3 = fig.add_subplot(gs[2])
 sns.lineplot(x=synapse_stdp_monitor.t/second,
-            y=synapse_stdp_monitor.c.T.flatten()/gmax,
+            y=synapse_stdp_monitor.c.T.flatten(),
             color='blue', ax=ax3)
 ax3.set_xlim([0, simulation_duration/second])
 ax3.set_ylabel('Eligibility\ntrace c(t)')
@@ -155,7 +155,7 @@ ax3.set_xticks([])
 # Plot 4: Synaptic strength
 ax4 = fig.add_subplot(gs[3])
 sns.lineplot(x=synapse_stdp_monitor.t/second,
-            y=synapse_stdp_monitor.s.T.flatten()/gmax,
+            y=synapse_stdp_monitor.s.T.flatten(),
             color='green', ax=ax4)
 ax4.set_xlim([0, simulation_duration/second])
 ax4.set_ylabel('Synaptic\nstrength s(t)')

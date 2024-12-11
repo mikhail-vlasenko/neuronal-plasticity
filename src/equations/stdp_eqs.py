@@ -9,7 +9,7 @@ El = -70*mV  # resting potential
 OEl = -74*mV  # resting potential for output neurons
 taue = 5*ms
 tauadapt = 50*ms
-v_adaptation = 5*mV
+v_adaptation = 10*mV
 output_neuron_rate_growth = 0.
 
 ## Noise
@@ -32,8 +32,8 @@ homeostasis_add = 0.05
 homeostasis_subtract = homeostasis_add * 2
 
 ## Dopamine signaling
-tauc = 25*ms  # very slow decay of eligibility trace
-taud = 25*ms
+tauc = 25*ms
+taud = 10*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
 epsilon_dopa = 1e-2
 
