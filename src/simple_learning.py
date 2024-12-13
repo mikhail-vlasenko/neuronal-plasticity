@@ -22,7 +22,7 @@ NUM_INHIBITORY = 16
 OUTPUT_NEURONS = 2
 SAMPLE_DURATION = 100 * ms
 NUM_EXPOSURES = 2
-epochs = 2
+epochs = 64
 wait_durations = 0
 weight_coef = 0.4
 hidden_connection_avg = 5
@@ -115,9 +115,8 @@ for sample_i in tqdm(range(math.floor(simulation_duration/SAMPLE_DURATION))):
     output_neurons.rate = 0
     output_neurons.expected_reward[0], output_neurons.expected_reward[1] = (
         expected_reward_merge(output_neurons.expected_reward))
-    # for reset_neurons in [output_neurons, neurons, inhibitory_neurons]:
-    #     reset_neurons.v = El
-    #     reset_neurons.ge = 0
+    if output_neurons.expected_reward[0] > epsilon_dopa * 0.95:
+        print(f'Well-trained at iteration {sample_i}')
 
 
 # Visualisation

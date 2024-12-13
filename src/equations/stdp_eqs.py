@@ -13,7 +13,7 @@ v_adaptation = 10*mV
 output_neuron_rate_growth = 0.
 
 ## Noise
-noise_sigma = 1*mV
+noise_sigma = 0*mV
 
 ## STDP
 taupre = 20*ms
@@ -29,6 +29,7 @@ dApre *= gmax
 homeostasis = True
 tau_homeostasis = 1000*ms
 homeostasis_add = 0.05
+homeostasis_max = 0.5
 homeostasis_subtract = homeostasis_add * 2
 
 ## Dopamine signaling
@@ -73,7 +74,7 @@ _synapse_on_pre = '''
 
 _homeostasis_pre = '''
     homeostasis_s += homeostasis_add
-    homeostasis_s = clip(homeostasis_s, 0, 1)
+    homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
     ge_post += homeostasis_s
 '''
 
@@ -84,7 +85,7 @@ _synapse_on_post = '''
 
 _homeostasis_post = '''
     homeostasis_s -= homeostasis_subtract
-    homeostasis_s = clip(homeostasis_s, 0, 1)
+    homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
 '''
 
 SYNAPSE_PARAMS = {
