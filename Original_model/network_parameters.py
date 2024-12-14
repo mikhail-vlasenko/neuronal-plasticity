@@ -88,9 +88,9 @@ net_dict = {
     # Factor to multiply the weight of the connections globally
     'global_g' : 5.,
     # Probablity of AMPA projections from excitatory is 0.8 of total probability of connection
-    'proportion_AMPA': 0.8,
+    'proportion_AMPA': 1.,
     # Probablity of NMDA projections from excitatory is 0.2 of total probability of connection
-    'proportion_NMDA': 0.2,
+    'proportion_NMDA': 0.,
     # There is only one synaptic delay in Giulia's column model, 2*ms
     'delay' : 2.*ms,
     # Transmission delay for excitatory connections

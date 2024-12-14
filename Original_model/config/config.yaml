@@ -1,4 +1,4 @@
-t_sim: 3000 # Simulation time in ms
+t_sim: 1000 # Simulation time in ms
 
 synaptic_density: 1
 

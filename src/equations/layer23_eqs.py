@@ -1,5 +1,5 @@
 import numpy as np
-from brian2 import Equations
+from brian2 import Equations, mV
 
 from Original_model.network_parameters import net_dict as ORIGINAL_NET_DICT, neuron_dict as ORIGINAL_NEURON_DICT
 
@@ -43,7 +43,7 @@ tau_ampa = 2.
 g_ampa_ext = 1.
 g_ampa_rec = 1.
 
-V_I = [-80.97, -82.35, -69.16, -67.94]
+receptors_V_I = [-80.97, -82.35, -69.16, -67.94]*mV
 tau_gaba = 5.
 g_gaba = 1.
 

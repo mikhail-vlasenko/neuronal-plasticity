@@ -183,6 +183,9 @@ class Network_main:
         # For each target, create synapses from all possible sources
         for n, target_pop in enumerate(self.pops):
             for m, source_pop in enumerate(self.pops, start=0):
+                if n < 1 or n > 4 or m < 1 or m > 4:
+                    # Skip connections not to layer 2/3
+                    continue
                 self.net_dict['connect_probs'][n][m] = float(self.net_dict['connect_probs'][n][m]) * cfg.synaptic_density
                 print('Synapse', iteration)
                 iteration += 1

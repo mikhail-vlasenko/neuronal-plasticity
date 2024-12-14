@@ -1,9 +1,13 @@
-from brian2 import NeuronGroup, Synapses, PoissonGroup, SpikeMonitor, Network, ms
+from brian2 import NeuronGroup, Synapses, PoissonGroup, SpikeMonitor, Network, ms, defaultclock
 from matplotlib import pyplot as plt
 
 from Original_model.utils.utils import setup_loggers
 from src.equations.layer23_eqs import *
 from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS
+
+
+# todo: remove
+defaultclock.dt = 0.1 * ms  # Time resolution of the simulation
 
 
 class Simulation:
@@ -39,6 +43,7 @@ class Simulation:
             population.V_L = self.neuron_dict['V_L'][i]
             population.C_m = self.neuron_dict['C_m'][i]
             population.g_L = self.neuron_dict['g_L'][i]
+            population.V_I = receptors_V_I[i]
 
             self.pops.append(population)
             self.spike_monitors.append(SpikeMonitor(population))
@@ -99,7 +104,7 @@ def main(seed=0):
     simulation.run(duration)
 
     PLOTTING_PARAMS.simulation_duration = duration
-    PLOTTING_PARAMS.plot_from = max(0, duration / ms - 2000)
+    PLOTTING_PARAMS.plot_from = max(0, duration / ms - 3000)
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()
