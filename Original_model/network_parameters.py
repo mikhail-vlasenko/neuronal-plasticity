@@ -94,7 +94,7 @@ net_dict = {
     # There is only one synaptic delay in Giulia's column model, 2*ms
     'delay' : 2.*ms,
     # Transmission delay for excitatory connections
-    'delay_e': np.array([2.,2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2.])*ms,
+    'delay_e': np.array([2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2.])*ms,
     # Transmission delay for inhibitory connections
     'delay_i': np.array([2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2.])*ms,
     # Rate of Poisson generator for background noise, same order as in 'populations'

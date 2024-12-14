@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from typing import Union, List
+
 import seaborn as sns
-from brian2 import ms, mV, second
+from brian2 import ms, mV, second, SpikeMonitor
 from matplotlib import pyplot as plt
 
 
@@ -98,21 +100,33 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
     ax_output.set_xlim(xlim)
 
 
-def spike_raster(ax, input_monitor, neuron_monitor, inhibitory_monitor, output_monitor):
+def spike_raster(
+        ax, input_monitor,
+        neuron_monitor: Union[SpikeMonitor, List[SpikeMonitor]],
+        inhibitory_monitor: Union[SpikeMonitor, List[SpikeMonitor]],
+        output_monitor
+):
     def crop_data(monitor, offset=0):
         mask = ((monitor.t / ms) >= PLOTTING_PARAMS.plot_from)
         return monitor.t[mask] / ms, monitor.i[mask] + offset
-    ax.scatter(*crop_data(input_monitor),
-               c='blue', label='Input', s=20)
-    ax.scatter(*crop_data(neuron_monitor, offset := len(input_monitor.source)),
-               c='green', label='Hidden', s=20)
-    ax.scatter(*crop_data(inhibitory_monitor, offset := offset + len(neuron_monitor.source)),
-               c='orange', label='Inhibitory', s=20)
-    ax.scatter(*crop_data(output_monitor, offset := offset + len(inhibitory_monitor.source)),
-               c='red', label='Output', s=20)
+
+    monitors = [input_monitor, neuron_monitor, inhibitory_monitor, output_monitor]
+    colors = ['blue', 'green', 'orange', 'red']
+    labels = ['Input', 'Excitatory', 'Inhibitory', 'Output']
+
+    offset = 0
+    for monitor_group, color, label in zip(monitors, colors, labels):
+        if monitor_group is None:
+            continue
+        if not isinstance(monitor_group, list):
+            monitor_group = [monitor_group]
+        for monitor in monitor_group:
+            ax.scatter(*crop_data(monitor, offset),
+                       c=color, label=label, s=20)
+            offset += len(monitor.source)
 
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Neuron index')
     ax.legend()
     ax.set_xlim(PLOTTING_PARAMS.xlim)
-    ax.set_ylim([-1, offset + len(output_monitor.source)])
+    ax.set_ylim([-1, offset])

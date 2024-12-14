@@ -3,6 +3,8 @@ from omegaconf import OmegaConf
 import os
 import logging
 import pandas as pd
+import sys
+
 
 def save_config(cfg, run_dir): # Save config file explicitly
     with open(os.path.join(run_dir, "config.yaml"), 'w') as f:
@@ -28,26 +30,13 @@ def setup_loggers(run_dir):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG) # DEBUG level captures all messages
 
-    # Create handlers for each level we want: info, warning, error
-    info_handler = logging.FileHandler(os.path.join(run_dir, 'info.log'))
-    warning_handler = logging.FileHandler(os.path.join(run_dir, 'warning.log'))
-    error_handler = logging.FileHandler(os.path.join(run_dir, 'error.log'))
-
-    # Set levels for handlers so they can capture the specific information
-    info_handler.setLevel(logging.INFO)
-    warning_handler.setLevel(logging.WARNING)
-    error_handler.setLevel(logging.ERROR)
+    console_handler = logging.StreamHandler(sys.stdout)
 
     # Create formatters and add it to handlers
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    info_handler.setFormatter(formatter)
-    warning_handler.setFormatter(formatter)
-    error_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
 
-    # Add handlers to the logger
-    log.addHandler(info_handler)
-    log.addHandler(warning_handler)
-    log.addHandler(error_handler)
+    log.addHandler(console_handler)
     return log
 
 def create_weights_dict(file_path):
