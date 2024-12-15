@@ -12,7 +12,7 @@ class PlottingParams:
     plot_from: int = 0
     plot_heatmaps: bool = True
     plot_adaptation: bool = True
-    minimal_reporting: bool = True
+    minimal_reporting: bool = False
     xlim: list = None
 
     def update(self):
@@ -69,7 +69,7 @@ def plot_output_potentials(ax, output_state_monitor, vt):
 def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor, eligibility_trace=False):
     xlim = [PLOTTING_PARAMS.xlim[0] * ms / output_synapse_monitor.clock.dt,
             PLOTTING_PARAMS.xlim[1] * ms / output_synapse_monitor.clock.dt]
-    if eligibility_trace:
+    if eligibility_trace or input_synapse_monitor is None:
         eligibility_trace_data = output_synapse_monitor.c[:]
         sns.heatmap(eligibility_trace_data,
                     ax=ax_input,
@@ -79,7 +79,10 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
         ax_input.set_ylabel('Output synapse index')
         ax_input.set_title('Output eligibility traces over time')
     else:
-        input_synapse_data = input_synapse_monitor.s[:]
+        if hasattr(input_synapse_monitor, 's'):
+            input_synapse_data = input_synapse_monitor.s[:]
+        else:
+            input_synapse_data = input_synapse_monitor.w[:]
         sns.heatmap(input_synapse_data,
                     ax=ax_input,
                     cmap='viridis',
@@ -89,7 +92,10 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
         ax_input.set_title('Input synaptic strengths over time')
     ax_input.set_xlim(xlim)
 
-    out_synapse_data = output_synapse_monitor.s[:]
+    if hasattr(output_synapse_monitor, 's'):
+        out_synapse_data = output_synapse_monitor.s[:]
+    else:
+        out_synapse_data = output_synapse_monitor.w[:]
     sns.heatmap(out_synapse_data,
                 ax=ax_output,
                 cmap='viridis',

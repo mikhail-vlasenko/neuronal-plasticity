@@ -1,5 +1,5 @@
 import numpy as np
-from brian2 import Equations, mV
+from brian2 import Equations, mV, ms
 
 from Original_model.network_parameters import net_dict as ORIGINAL_NET_DICT, neuron_dict as ORIGINAL_NEURON_DICT
 
@@ -75,37 +75,68 @@ NEURON_MODEL = Equations(f'''
 
         ''')
 
+
+taupre = 20*ms
+taupost = taupre
+gmax = 0.5
+max_strength = 1
+dApre = 0.1  # this is basically by how much the eligibility trace increases
+dApost = -dApre * taupre / taupost * 1.05
+dApost *= gmax
+dApre *= gmax
+
+## Dopamine signaling
+tauc = 250*ms
+taud = 10*ms
+taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
+epsilon_dopa = 1e-2
+
+expected_reward_change_rate = 0.25
+
 AMPA_MODEL = Equations(f'''
     s_ampa_tot_l23_post = w*s_ampa : 1 (summed)  
     ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
-    w : 1
+    
+    dc/dt = -c / tauc : 1 (clock-driven)
+    d = 0.05 : 1
+    dw/dt = c * d / taus : 1 (clock-driven)
+    dApre/dt = -Apre / taupre : 1 (event-driven)
+    dApost/dt = -Apost / taupost : 1 (event-driven)
 ''')
 
 ampa_on_pre = '''
+    w = clip(w, 0, max_strength)
     s_ampa += 1
+    Apre += dApre
+    c = clip(c + Apost, -gmax, gmax)
 '''
-# todo: add stdp
+
+ampa_on_post = '''
+    Apost += dApost
+    c = clip(c + Apre, -gmax, gmax)
+'''
 
 
-PV_MODEL = Equations(f'''
+_inhib_synapse_shared = f'''
+    ds_gaba/dt = - s_gaba/({tau_gaba}*ms) : 1 (clock-driven)
+    w : 1
+'''
+
+PV_MODEL = f'''
     s_gaba_tot_l23pv_post = w*s_gaba : 1 (summed)  
-    ds_gaba/dt = - s_gaba/({tau_gaba}*ms) : 1 (clock-driven)
-    w : 1
-''')
+''' + _inhib_synapse_shared
 
-SST_MODEL = Equations(f'''
+SST_MODEL = f'''
     s_gaba_tot_l23sst_post = w*s_gaba : 1 (summed)  
-    ds_gaba/dt = - s_gaba/({tau_gaba}*ms) : 1 (clock-driven)
-    w : 1
-''')
+''' + _inhib_synapse_shared
 
-VIP_MODEL = Equations(f'''
+VIP_MODEL = f'''
     s_gaba_tot_l23vip_post = w*s_gaba : 1 (summed)  
-    ds_gaba/dt = - s_gaba/({tau_gaba}*ms) : 1 (clock-driven)
-    w : 1
-''')
+''' + _inhib_synapse_shared
 
 gaba_on_pre = '''
     s_gaba += 1
 '''
-# todo: add homeostasis. can the models be combined?
+
+gaba_on_post = ''
+# todo: add homeostasis

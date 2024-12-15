@@ -1,10 +1,9 @@
-from brian2 import NeuronGroup, Synapses, PoissonGroup, SpikeMonitor, Network, ms, defaultclock
+from brian2 import NeuronGroup, Synapses, PoissonGroup, SpikeMonitor, Network, ms, defaultclock, StateMonitor
 from matplotlib import pyplot as plt
 
 from Original_model.utils.utils import setup_loggers
 from src.equations.layer23_eqs import *
-from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS
-
+from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS, plot_heatmaps
 
 # todo: remove
 defaultclock.dt = 0.1 * ms  # Time resolution of the simulation
@@ -18,6 +17,9 @@ class Simulation:
         self.log = log
         self.net = None
         self.num_populations = 4
+        self.spike_monitors = []
+        self.weight_monitors = []
+        self.dopamine_monitors = []
 
         self.__create_neurons()
         self.__create_poisson_bg_input()
@@ -27,7 +29,6 @@ class Simulation:
 
     def __create_neurons(self):
         self.pops = []
-        self.spike_monitors = []
         for i in range(self.num_populations):
             population = NeuronGroup(
                 self.net_dict['num_neurons'][i],
@@ -58,6 +59,7 @@ class Simulation:
         self.synapses = []
         models = [AMPA_MODEL, PV_MODEL, SST_MODEL, VIP_MODEL]
         on_pres = [ampa_on_pre, gaba_on_pre, gaba_on_pre, gaba_on_pre]
+        on_posts = [ampa_on_post, gaba_on_post, gaba_on_post, gaba_on_post]
         for n, target_pop in enumerate(self.pops):
             for m, source_pop in enumerate(self.pops):
                 connect_prob = self.net_dict['connect_probs'][n][m]
@@ -69,6 +71,7 @@ class Simulation:
                     source_pop, target_pop,
                     model=models[m],
                     on_pre=on_pres[m],
+                    on_post=on_posts[m],
                     method='euler',
                     delay=self.net_dict['delay']
                 )
@@ -77,6 +80,9 @@ class Simulation:
                 synapse.connect(**connect_kwargs)
 
                 synapse.w = self.net_dict['global_g'] * strength / (connect_prob * self.net_dict['num_neurons'][m])
+                if m == 0:
+                    state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(128)])
+                    self.weight_monitors.append(state_monitor)
                 self.synapses.append(synapse)
 
     def __connect_poisson_bg_input(self):
@@ -88,8 +94,9 @@ class Simulation:
 
     def run(self, duration):
         self.net = Network(
-            self.pops, self.spike_monitors, self.poisson_groups,
-            self.synapses,  self.poisson_synapses
+            self.pops, self.poisson_groups,
+            self.synapses, self.poisson_synapses,
+            self.spike_monitors, self.weight_monitors, self.dopamine_monitors
         )
         self.net.run(duration)
 
@@ -97,7 +104,7 @@ class Simulation:
 def main(seed=0):
     np.random.seed(seed)
 
-    duration = 1000 * ms
+    duration = 3000 * ms
     log = setup_loggers('')
 
     simulation = Simulation(NET_DICT, NEURON_DICT, log)
@@ -109,6 +116,10 @@ def main(seed=0):
 
     fig, gs = get_plots_iterator()
     fig.add_subplot(gs.__next__())  # Skip the first subplot
+    fig.add_subplot(gs.__next__())
+    ax_input = fig.add_subplot(gs.__next__())
+    ax_output = fig.add_subplot(gs.__next__())
+    plot_heatmaps(ax_input, ax_output, None, simulation.weight_monitors[0])
     spike_raster(
         fig.add_subplot(gs.__next__()),
         None,
