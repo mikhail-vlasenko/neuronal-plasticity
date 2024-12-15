@@ -12,7 +12,7 @@ class PlottingParams:
     plot_from: int = 0
     plot_heatmaps: bool = True
     plot_adaptation: bool = True
-    minimal_reporting: bool = False
+    minimal_reporting: bool = True
     xlim: list = None
 
     def update(self):
@@ -107,7 +107,8 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
 
 
 def spike_raster(
-        ax, input_monitor,
+        ax,
+        input_monitor,
         neuron_monitor: Union[SpikeMonitor, List[SpikeMonitor]],
         inhibitory_monitor: Union[SpikeMonitor, List[SpikeMonitor]],
         output_monitor

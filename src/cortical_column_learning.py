@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 
 from Original_model.utils.utils import setup_loggers
 from src.equations.layer23_eqs import *
+from src.input_from_csv import csv_input_neurons
 from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS, plot_heatmaps
 
 # todo: remove
@@ -13,6 +14,12 @@ class Simulation:
     def __init__(self, net_dict, neuron_dict, log):
         self.net_dict = net_dict
         self.neuron_dict = neuron_dict
+        self.sample_duration = 100 * ms
+        self.epochs = 8
+        self.num_exposures = 10
+        self.wait_durations = 2
+        self.data_path = '../data/mini_sample.csv'
+        self.in_connection_avg = 32
 
         self.log = log
         self.net = None
@@ -20,11 +27,12 @@ class Simulation:
         self.spike_monitors = []
         self.weight_monitors = []
         self.dopamine_monitors = []
+        self.net_params = [self.spike_monitors, self.weight_monitors, self.dopamine_monitors]
 
         self.__create_neurons()
-        self.__create_poisson_bg_input()
         self.__connect_populations()
-        self.__connect_poisson_bg_input()
+        # self.__connect_poisson_bg_input()
+        self.__connect_training_input()
         log.info('Initialization complete')
 
     def __create_neurons(self):
@@ -48,16 +56,11 @@ class Simulation:
 
             self.pops.append(population)
             self.spike_monitors.append(SpikeMonitor(population))
-
-    def __create_poisson_bg_input(self):
-        self.poisson_groups = []  # List to hold Poisson background generators
-        for n in np.arange(self.num_populations):
-            poisson_group = PoissonGroup(self.net_dict['num_neurons'][n], rates=self.net_dict['bg_rate'][n])
-            self.poisson_groups.append(poisson_group)
+        self.net_params.append(self.pops)
 
     def __connect_populations(self):
         self.synapses = []
-        models = [AMPA_MODEL, PV_MODEL, SST_MODEL, VIP_MODEL]
+        models = [get_ampa_model(), PV_MODEL, SST_MODEL, VIP_MODEL]
         on_pres = [ampa_on_pre, gaba_on_pre, gaba_on_pre, gaba_on_pre]
         on_posts = [ampa_on_post, gaba_on_post, gaba_on_post, gaba_on_post]
         for n, target_pop in enumerate(self.pops):
@@ -84,45 +87,61 @@ class Simulation:
                     state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(128)])
                     self.weight_monitors.append(state_monitor)
                 self.synapses.append(synapse)
+        self.net_params.append(self.synapses)
 
     def __connect_poisson_bg_input(self):
-        self.poisson_synapses = []  # List for Poisson background synapses
-        for n in np.arange(self.num_populations):
-            poisson_s = Synapses(self.poisson_groups[n], self.pops[n], on_pre='s_ampa_ext += 1', method='euler')
+        self.duration = 1000 * ms
+        self.poisson_groups = []
+        self.poisson_synapses = []
+        for pop_idx in np.arange(self.num_populations):
+            poisson_group = PoissonGroup(self.net_dict['num_neurons'][pop_idx], rates=self.net_dict['bg_rate'][pop_idx])
+            self.poisson_groups.append(poisson_group)
+            poisson_s = Synapses(self.poisson_groups[pop_idx], self.pops[pop_idx], on_pre='s_ampa_ext += 1', method='euler')
             self.poisson_synapses.append(poisson_s)
-            self.poisson_synapses[n].connect(j='i')  # Connects Poisson one-to-one
+            self.poisson_synapses[pop_idx].connect(j='i')  # Connects Poisson one-to-one
+        self.net_params.append(self.poisson_groups)
+        self.net_params.append(self.poisson_synapses)
 
-    def run(self, duration):
-        self.net = Network(
-            self.pops, self.poisson_groups,
-            self.synapses, self.poisson_synapses,
-            self.spike_monitors, self.weight_monitors, self.dopamine_monitors
+    def __connect_training_input(self):
+        self.input_neurons, self.targets, self.input_dim, self.duration = csv_input_neurons(
+            self.data_path, duration=self.sample_duration, repeat_for=self.epochs,
+            num_exposures=self.num_exposures, wait_durations=self.wait_durations, blasting=False
         )
-        self.net.run(duration)
+        self.input_monitor = SpikeMonitor(self.input_neurons)
+        # connect to excitatory neurons
+        synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), **AMPA_PARAMS)
+        synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0])
+        synapse.w = self.net_dict['global_g'] * 10000
+        self.synapses.append(synapse)
+        self.net_params.append(self.input_neurons)
+        self.net_params.append(self.input_monitor)
+
+
+    def run(self):
+        self.net = Network(*self.net_params)
+        self.net.run(self.duration)
 
 
 def main(seed=0):
     np.random.seed(seed)
-
-    duration = 3000 * ms
     log = setup_loggers('')
 
     simulation = Simulation(NET_DICT, NEURON_DICT, log)
-    simulation.run(duration)
+    simulation.run()
 
-    PLOTTING_PARAMS.simulation_duration = duration
-    PLOTTING_PARAMS.plot_from = max(0, duration / ms - 3000)
+    PLOTTING_PARAMS.simulation_duration = simulation.duration
+    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 2000)
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()
     fig.add_subplot(gs.__next__())  # Skip the first subplot
-    fig.add_subplot(gs.__next__())
-    ax_input = fig.add_subplot(gs.__next__())
-    ax_output = fig.add_subplot(gs.__next__())
-    plot_heatmaps(ax_input, ax_output, None, simulation.weight_monitors[0])
+    # fig.add_subplot(gs.__next__())
+    # ax_input = fig.add_subplot(gs.__next__())
+    # ax_output = fig.add_subplot(gs.__next__())
+    # plot_heatmaps(ax_input, ax_output, None, simulation.weight_monitors[0])
     spike_raster(
         fig.add_subplot(gs.__next__()),
-        None,
+        simulation.input_monitor if hasattr(simulation, 'input_monitor') else None,
         simulation.spike_monitors[0], simulation.spike_monitors[1:],
         None
     )

@@ -48,6 +48,8 @@ tau_gaba = 5.
 g_gaba = 1.
 
 
+ampa_components = [f's_ampa_tot_{i}' for i in range(5)]
+_ampa_inits = '\n'.join([f'{comp} : 1' for comp in ampa_components])
 NEURON_MODEL = Equations(f'''
         dv/dt = (-g_L*(v - V_L) - I_syn)/C_m: volt (unless refractory)
         I_syn = I_DC_input + I_ampa_ext + I_ampa_rec + I_gaba : amp
@@ -63,8 +65,8 @@ NEURON_MODEL = Equations(f'''
         ds_ampa_ext/dt = -s_ampa_ext/({tau_ampa}*ms) : 1
 
         I_ampa_rec = {g_ampa_rec}*nS*(v - {V_E}*mV)*s_ampa_tot : amp
-        s_ampa_tot = s_ampa_tot_l23 : 1
-        s_ampa_tot_l23 : 1
+        s_ampa_tot = {' + '.join(ampa_components)} : 1
+        {_ampa_inits}
 
         I_gaba = {g_gaba}*nS*(v - V_I)*s_gaba_tot : amp
         V_I : volt
@@ -79,7 +81,7 @@ NEURON_MODEL = Equations(f'''
 taupre = 20*ms
 taupost = taupre
 gmax = 0.5
-max_strength = 1
+max_strength = 10000  # todo: lower
 dApre = 0.1  # this is basically by how much the eligibility trace increases
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
@@ -93,16 +95,21 @@ epsilon_dopa = 1e-2
 
 expected_reward_change_rate = 0.25
 
-AMPA_MODEL = Equations(f'''
-    s_ampa_tot_l23_post = w*s_ampa : 1 (summed)  
-    ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
-    
-    dc/dt = -c / tauc : 1 (clock-driven)
-    d = 0.05 : 1
-    dw/dt = c * d / taus : 1 (clock-driven)
-    dApre/dt = -Apre / taupre : 1 (event-driven)
-    dApost/dt = -Apost / taupost : 1 (event-driven)
-''')
+_ampa_counter = 0
+def get_ampa_model():
+    global _ampa_counter
+    eq = Equations(f'''
+        s_ampa_tot_{_ampa_counter}_post = w*s_ampa : 1 (summed)  
+        ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
+        
+        dc/dt = -c / tauc : 1 (clock-driven)
+        dd/dt = -d / taud : 1 (clock-driven)
+        dw/dt = c * d / taus : 1 (clock-driven)
+        dApre/dt = -Apre / taupre : 1 (event-driven)
+        dApost/dt = -Apost / taupost : 1 (event-driven)
+    ''')
+    _ampa_counter += 1
+    return eq
 
 ampa_on_pre = '''
     w = clip(w, 0, max_strength)
@@ -115,6 +122,13 @@ ampa_on_post = '''
     Apost += dApost
     c = clip(c + Apre, -gmax, gmax)
 '''
+
+AMPA_PARAMS = {
+    'on_pre': ampa_on_pre,
+    'on_post': ampa_on_post,
+    'method': 'euler',
+    'delay': NET_DICT['delay']
+}
 
 
 _inhib_synapse_shared = f'''
