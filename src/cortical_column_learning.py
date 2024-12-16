@@ -20,7 +20,8 @@ class Simulation:
         self.neuron_dict = neuron_dict
         self.sample_duration = 100 * ms
         self.epochs = 10
-        self.num_exposures = 8
+        self.num_exposures = 3
+        self.multiply_input = 16
         self.wait_durations = 0
         self.data_path = '../data/mini_sample.csv'
         self.in_connection_avg = 32
@@ -107,7 +108,7 @@ class Simulation:
                 synapse.connect(**connect_kwargs)
 
                 weight = strength / (connect_prob * self.net_dict['num_neurons'][m])
-                self.log.info(f'Weight for {m} -> {n} connection: {weight}')
+                # self.log.info(f'Weight for {m} -> {n} connection: {weight}')
                 synapse.w = weight
                 if m == 0:
                     state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(128)])
@@ -145,13 +146,12 @@ class Simulation:
         self.input_neurons, self.targets, self.input_dim, self.duration = csv_input_neurons(
             self.data_path, duration=self.sample_duration, repeat_for=self.epochs,
             num_exposures=self.num_exposures, wait_durations=self.wait_durations,
-            multiply_input=32,
             blasting=False
         )
         self.input_monitor = SpikeMonitor(self.input_neurons)
         # connect to excitatory neurons
         synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), **AMPA_PARAMS)
-        synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0])
+        synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input)
         synapse.w = 0.015
         self.dopamine_modulated_synapse_idx.append(len(self.synapses))
         self.synapses.append(synapse)
