@@ -10,9 +10,9 @@ from matplotlib import pyplot as plt
 class PlottingParams:
     simulation_duration: int = 0 * ms
     plot_from: int = 0
-    plot_heatmaps: bool = True
-    plot_adaptation: bool = True
-    minimal_reporting: bool = True
+    plot_heatmaps: bool = False
+    plot_adaptation: bool = False
+    minimal_reporting: bool = False
     xlim: list = None
 
     def update(self):

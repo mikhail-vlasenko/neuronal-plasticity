@@ -1,10 +1,14 @@
 from brian2 import NeuronGroup, Synapses, PoissonGroup, SpikeMonitor, Network, ms, defaultclock, StateMonitor
 from matplotlib import pyplot as plt
+from tqdm import tqdm
+import math
 
 from Original_model.utils.utils import setup_loggers
 from src.equations.layer23_eqs import *
+from src.equations.stdp_eqs import expected_reward_merge
 from src.input_from_csv import csv_input_neurons
-from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS, plot_heatmaps
+from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS, plot_heatmaps, plot_dopamine, \
+    plot_output_potentials
 
 # todo: remove
 defaultclock.dt = 0.1 * ms  # Time resolution of the simulation
@@ -20,6 +24,7 @@ class Simulation:
         self.wait_durations = 0
         self.data_path = '../data/mini_sample.csv'
         self.in_connection_avg = 32
+        self.out_connection_avg = 128
 
         self.log = log
         self.net = None
@@ -28,17 +33,25 @@ class Simulation:
         self.dopamine_modulated_synapse_idx = []  # holds indices of synapses that are trained with dopamine
         self.spike_monitors = []
         self.weight_monitors = []
-        self.dopamine_monitors = []
         self.net_params = [self.synapses,
-                           self.spike_monitors, self.weight_monitors, self.dopamine_monitors]
+                           self.spike_monitors, self.weight_monitors]
 
         self.__create_neurons()
+        self.__create_output_neurons()
         self.__connect_populations()
         # self.__connect_poisson_bg_input()
         self.__connect_training_input()
-        # self.__create_output_neurons()
-        # self.__connect_dopamine_synapses()
+        self.__connect_dopamine_synapses()
         log.info('Initialization complete')
+
+    def __post_init_population(self, population, i):
+        population.v_th = self.neuron_dict['V_th'][i]
+        population.v_reset = self.neuron_dict['V_reset'][i]
+        population.v = self.neuron_dict['V_L'][i]
+        population.V_L = self.neuron_dict['V_L'][i]
+        population.C_m = self.neuron_dict['C_m'][i]
+        population.g_L = self.neuron_dict['g_L'][i]
+        population.V_I = receptors_V_I[i]
 
     def __create_neurons(self):
         self.pops = []
@@ -51,13 +64,7 @@ class Simulation:
                 refractory=self.neuron_dict['tau_ref'][i],
                 method='euler'
             )
-            population.v_th = self.neuron_dict['V_th'][i]
-            population.v_reset = self.neuron_dict['V_reset'][i]
-            population.v = self.neuron_dict['V_L'][i]
-            population.V_L = self.neuron_dict['V_L'][i]
-            population.C_m = self.neuron_dict['C_m'][i]
-            population.g_L = self.neuron_dict['g_L'][i]
-            population.V_I = receptors_V_I[i]
+            self.__post_init_population(population, i)
 
             self.pops.append(population)
             self.spike_monitors.append(SpikeMonitor(population))
@@ -66,13 +73,14 @@ class Simulation:
     def __create_output_neurons(self):
         self.output_neurons = NeuronGroup(
             2,
-            model=NEURON_MODEL,  # todo OUTPUT_NEURON_MODEL
-            threshold='v > v_th',
-            reset='v = v_reset',
-            refractory='5*ms',
-            method='euler'
+            **OUTPUT_NEURON_PARAMS
         )
+        self.__post_init_population(self.output_neurons, 0)
+        self.output_monitor = SpikeMonitor(self.output_neurons)
+        self.output_state_monitor = StateMonitor(self.output_neurons, ['v', 'adaptation'], record=[0, 1])
         self.net_params.append(self.output_neurons)
+        self.net_params.append(self.output_monitor)
+        self.net_params.append(self.output_state_monitor)
 
     def __connect_populations(self):
         self.synapses = []
@@ -107,7 +115,18 @@ class Simulation:
                     self.dopamine_modulated_synapse_idx.append(len(self.synapses))
 
                 self.synapses.append(synapse)
+        if hasattr(self, 'output_neurons'):
+            synapse = Synapses(
+                self.pops[0], self.output_neurons, model=get_ampa_model(), **AMPA_PARAMS
+            )
+            synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0])
+            synapse.w = 0.015
+            self.dopamine_modulated_synapse_idx.append(len(self.synapses))
+            self.synapses.append(synapse)
+
         self.net_params.append(self.synapses)
+        self.dopamine_monitor = StateMonitor(self.synapses[self.dopamine_modulated_synapse_idx[0]], ['d'], record=[0])
+        self.net_params.append(self.dopamine_monitor)
 
     def __connect_poisson_bg_input(self):
         self.duration = 1000 * ms
@@ -139,31 +158,45 @@ class Simulation:
         self.net_params.append(self.input_neurons)
         self.net_params.append(self.input_monitor)
 
+    def __connect_post_prediction_inhibition(self):
+        self.post_prediction_inhib_value = 1
+        post_prediction_inhibitors = []
+        for target in self.pops + [self.output_neurons]:
+            post_prediction_inhibitors.append(Synapses(
+                self.output_neurons, target, model='''''',
+                on_pre=f'''s_gaba_prediction += {self.post_prediction_inhib_value}''',
+                # delay=2*ms,
+                method='exact'
+            ))
+            post_prediction_inhibitors[-1].connect()
+
     def __connect_dopamine_synapses(self):
         self.reward_synapses = []
         for _i in self.dopamine_modulated_synapse_idx:
             target = self.synapses[_i]
+            # + reward because 0 spiked (reward is negative for samples with answer 1)
             self.reward_synapses.append(Synapses(self.output_neurons[0], target, model='''''',
-                                            on_pre='''
-                                            d_post += (reward_value - expected_reward_pre)
-                                            ''',
-                                            method='exact'))
+                                        on_pre='''d_post += (reward_value - expected_reward_pre)''',
+                                        method='exact'))
             self.reward_synapses[-1].connect()
 
             # - reward because 1 spiked
             self.reward_synapses.append(Synapses(self.output_neurons[1], target, model='''''',
-                                            on_pre='''
-                                            d_post -= (reward_value - expected_reward_pre)
-                                            ''',
-                                            method='exact'))
+                                        on_pre='''d_post -= (reward_value - expected_reward_pre)''',
+                                        method='exact'))
             self.reward_synapses[-1].connect()
-
         self.net_params.append(self.reward_synapses)
-
 
     def run(self):
         self.net = Network(*self.net_params)
-        self.net.run(self.duration)
+        for sample_i in tqdm(range(math.floor(self.duration / self.sample_duration))):
+            # assign negative reward to the second output neuron. its synapses subtract the reward
+            reward_value = epsilon_dopa if self.targets[sample_i] == 0 else -epsilon_dopa
+            self.net.run(self.sample_duration)
+            self.output_neurons.expected_reward[0], self.output_neurons.expected_reward[1] = (
+                expected_reward_merge(self.output_neurons.expected_reward))
+            if self.output_neurons.expected_reward[0] > epsilon_dopa * 0.95:
+                print(f'Well-trained at iteration {sample_i}')
 
 
 def main(seed=0):
@@ -178,16 +211,22 @@ def main(seed=0):
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()
-    fig.add_subplot(gs.__next__())  # Skip the first subplot
-    # fig.add_subplot(gs.__next__())
-    # ax_input = fig.add_subplot(gs.__next__())
-    # ax_output = fig.add_subplot(gs.__next__())
-    # plot_heatmaps(ax_input, ax_output, None, simulation.weight_monitors[0])
+
+    plot_dopamine(fig.add_subplot(gs.__next__()), simulation.dopamine_monitor)
+    if not PLOTTING_PARAMS.minimal_reporting:
+        plot_output_potentials(fig.add_subplot(gs.__next__()),
+                               simulation.output_state_monitor, simulation.neuron_dict['V_th'][0])
+
+    if PLOTTING_PARAMS.plot_heatmaps and not PLOTTING_PARAMS.minimal_reporting:
+        ax_input = fig.add_subplot(gs.__next__())
+        ax_output = fig.add_subplot(gs.__next__())
+        plot_heatmaps(ax_input, ax_output, None, simulation.weight_monitors[0])
+
     spike_raster(
         fig.add_subplot(gs.__next__()),
         simulation.input_monitor if hasattr(simulation, 'input_monitor') else None,
         simulation.spike_monitors[0], simulation.spike_monitors[1:],
-        None
+        simulation.output_monitor if hasattr(simulation, 'output_monitor') else None,
     )
 
     plt.savefig('cortical_column_learning.png')

@@ -71,11 +71,11 @@ NEURON_MODEL = Equations(f'''
 
         I_gaba = {g_gaba}*nS*(v - V_I)*s_gaba_tot : amp
         V_I : volt
-        s_gaba_tot = s_gaba_tot_l23pv + s_gaba_tot_l23sst + s_gaba_tot_l23vip : 1
+        s_gaba_tot = s_gaba_tot_l23pv + s_gaba_tot_l23sst + s_gaba_tot_l23vip + s_gaba_prediction : 1
         s_gaba_tot_l23pv : 1
         s_gaba_tot_l23sst : 1
         s_gaba_tot_l23vip : 1
-
+        ds_gaba_prediction/dt = - s_gaba_prediction/({tau_gaba}*ms) : 1
         ''')
 
 
@@ -104,7 +104,7 @@ def get_ampa_model():
         ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
         
         dc/dt = -c / tauc : 1 (clock-driven)
-        d = 1 : 1 (constant over dt)
+        dd/dt = -d / taud : 1 (clock-driven)
         dw/dt = c * d / taus : 1 (clock-driven)
         dApre/dt = -Apre / taupre : 1 (event-driven)
         dApost/dt = -Apost / taupost : 1 (event-driven)
@@ -155,3 +155,42 @@ gaba_on_pre = '''
 
 gaba_on_post = ''
 # todo: add homeostasis
+
+
+tauadapt = 50*ms
+v_adaptation = 10*mV
+
+output_neuron_model = Equations(f'''
+        dv/dt = (-g_L*(v - V_L) - I_syn)/C_m: volt (unless refractory)
+        I_syn = I_ampa_rec + I_gaba : amp
+        
+        dadaptation/dt = -adaptation / tauadapt : volt
+        expected_reward : 1
+
+        V_L : volt
+        g_L : siemens
+        C_m : farad
+        v_th : volt
+        v_reset : volt
+        V_I : volt
+
+        I_ampa_rec = {g_ampa_rec}*nS*(v - {V_E}*mV)*s_ampa_tot : amp
+        s_ampa_tot = {' + '.join(ampa_components)} : 1
+        {_ampa_inits}
+        
+        I_gaba = {g_gaba}*nS*(v - V_I)*s_gaba_tot : amp
+        s_gaba_tot = s_gaba_prediction : 1
+        ds_gaba_prediction/dt = - s_gaba_prediction/({tau_gaba}*ms) : 1
+''')
+
+OUTPUT_NEURON_PARAMS = {
+    'model': output_neuron_model,
+    'threshold': 'v > v_th',
+    'reset': '''
+        expected_reward += expected_reward_change_rate * (reward_value - expected_reward)
+        adaptation += v_adaptation
+        v = v_reset
+    ''',
+    'refractory': '5*ms',
+    'method': 'euler'
+}
