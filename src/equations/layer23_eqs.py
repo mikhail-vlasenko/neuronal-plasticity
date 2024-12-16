@@ -88,6 +88,12 @@ dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
 
+## Homeostasis
+tau_homeostasis = 1000*ms
+homeostasis_add = 0.05
+homeostasis_max = 0.5
+homeostasis_subtract = homeostasis_add * 2
+
 ## Dopamine signaling
 tauc = 250*ms
 taud = 10*ms
@@ -102,6 +108,7 @@ def get_ampa_model():
     eq = Equations(f'''
         s_ampa_tot_{_ampa_counter}_post = w*s_ampa : 1 (summed)  
         ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
+        dhomeostasis_s/dt = -homeostasis_s / tau_homeostasis : 1 (clock-driven)
         
         dc/dt = -c / tauc : 1 (clock-driven)
         dd/dt = -d / taud : 1 (clock-driven)
@@ -117,11 +124,16 @@ ampa_on_pre = '''
     s_ampa += 1
     Apre += dApre
     c = clip(c + Apost, -gmax, gmax)
+    homeostasis_s += homeostasis_add
+    homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
+    s_ampa += homeostasis_s
 '''
 
 ampa_on_post = '''
     Apost += dApost
     c = clip(c + Apre, -gmax, gmax)
+    homeostasis_s -= homeostasis_subtract
+    homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
 '''
 
 AMPA_PARAMS = {
