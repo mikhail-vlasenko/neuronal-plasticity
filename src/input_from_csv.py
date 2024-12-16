@@ -3,7 +3,7 @@ import pandas as pd
 from brian2 import ms, SpikeGeneratorGroup, second
 
 
-def csv_input_neurons(csv_path: str, duration, repeat_for=1, num_exposures=1, wait_durations=0, blasting=False):
+def csv_input_neurons(csv_path: str, duration, repeat_for=1, num_exposures=1, wait_durations=0, multiply_input=1, blasting=False):
     """
     Produces the input neurons from a CSV file.
     Also returns the input size and the simulation duration.
@@ -45,10 +45,14 @@ def csv_input_neurons(csv_path: str, duration, repeat_for=1, num_exposures=1, wa
 
     # Convert to arrays with proper units
     indices = np.array(indices)
-    times = np.array(times) * second
+    times = np.array(times)
+    if multiply_input > 1:
+        indices = np.concatenate([indices + i * input_dim for i in range(multiply_input)])
+        times = np.concatenate([times for _ in range(multiply_input)])
+        input_dim *= multiply_input
 
     # Create input neurons
-    input_neurons = SpikeGeneratorGroup(input_dim, indices, times)
+    input_neurons = SpikeGeneratorGroup(input_dim, indices, times * second)
     return input_neurons, targets, input_dim, len(df) * pattern_duration * repeat_for
 
 

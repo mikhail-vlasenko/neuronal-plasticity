@@ -41,12 +41,12 @@ for key, value in NEURON_DICT.items():
 
 V_E = 0.
 tau_ampa = 2.
-g_ampa_ext = 1.
-g_ampa_rec = 1.
+g_ampa_ext = 1. * NET_DICT['global_g']
+g_ampa_rec = 1. * NET_DICT['global_g']
 
 receptors_V_I = [-80.97, -82.35, -69.16, -67.94]*mV
 tau_gaba = 5.
-g_gaba = 1.
+g_gaba = 1. * NET_DICT['global_g']
 
 
 ampa_components = [f's_ampa_tot_{i}' for i in range(5)]
@@ -81,9 +81,9 @@ NEURON_MODEL = Equations(f'''
 
 taupre = 20*ms
 taupost = taupre
-gmax = 0.5
-max_strength = 10000  # todo: lower
-dApre = 0.1  # this is basically by how much the eligibility trace increases
+max_strength = 0.02
+gmax = 0.5 * max_strength
+dApre = 0.1
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
 dApre *= gmax
@@ -104,7 +104,7 @@ def get_ampa_model():
         ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
         
         dc/dt = -c / tauc : 1 (clock-driven)
-        dd/dt = -d / taud : 1 (clock-driven)
+        d = 1 : 1 (constant over dt)
         dw/dt = c * d / taus : 1 (clock-driven)
         dApre/dt = -Apre / taupre : 1 (event-driven)
         dApost/dt = -Apost / taupost : 1 (event-driven)

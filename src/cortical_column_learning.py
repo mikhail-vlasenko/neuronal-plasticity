@@ -16,7 +16,7 @@ class Simulation:
         self.neuron_dict = neuron_dict
         self.sample_duration = 100 * ms
         self.epochs = 10
-        self.num_exposures = 4
+        self.num_exposures = 8
         self.wait_durations = 0
         self.data_path = '../data/mini_sample.csv'
         self.in_connection_avg = 32
@@ -24,15 +24,20 @@ class Simulation:
         self.log = log
         self.net = None
         self.num_populations = 4
+        self.synapses = []
+        self.dopamine_modulated_synapse_idx = []  # holds indices of synapses that are trained with dopamine
         self.spike_monitors = []
         self.weight_monitors = []
         self.dopamine_monitors = []
-        self.net_params = [self.spike_monitors, self.weight_monitors, self.dopamine_monitors]
+        self.net_params = [self.synapses,
+                           self.spike_monitors, self.weight_monitors, self.dopamine_monitors]
 
         self.__create_neurons()
         self.__connect_populations()
         # self.__connect_poisson_bg_input()
         self.__connect_training_input()
+        # self.__create_output_neurons()
+        # self.__connect_dopamine_synapses()
         log.info('Initialization complete')
 
     def __create_neurons(self):
@@ -58,6 +63,17 @@ class Simulation:
             self.spike_monitors.append(SpikeMonitor(population))
         self.net_params.append(self.pops)
 
+    def __create_output_neurons(self):
+        self.output_neurons = NeuronGroup(
+            2,
+            model=NEURON_MODEL,  # todo OUTPUT_NEURON_MODEL
+            threshold='v > v_th',
+            reset='v = v_reset',
+            refractory='5*ms',
+            method='euler'
+        )
+        self.net_params.append(self.output_neurons)
+
     def __connect_populations(self):
         self.synapses = []
         models = [get_ampa_model(), PV_MODEL, SST_MODEL, VIP_MODEL]
@@ -82,10 +98,14 @@ class Simulation:
                 if m == n: connect_kwargs['condition'] = 'i != j'
                 synapse.connect(**connect_kwargs)
 
-                synapse.w = self.net_dict['global_g'] * strength / (connect_prob * self.net_dict['num_neurons'][m])
+                weight = strength / (connect_prob * self.net_dict['num_neurons'][m])
+                self.log.info(f'Weight for {m} -> {n} connection: {weight}')
+                synapse.w = weight
                 if m == 0:
                     state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(128)])
                     self.weight_monitors.append(state_monitor)
+                    self.dopamine_modulated_synapse_idx.append(len(self.synapses))
+
                 self.synapses.append(synapse)
         self.net_params.append(self.synapses)
 
@@ -105,16 +125,40 @@ class Simulation:
     def __connect_training_input(self):
         self.input_neurons, self.targets, self.input_dim, self.duration = csv_input_neurons(
             self.data_path, duration=self.sample_duration, repeat_for=self.epochs,
-            num_exposures=self.num_exposures, wait_durations=self.wait_durations, blasting=False
+            num_exposures=self.num_exposures, wait_durations=self.wait_durations,
+            multiply_input=32,
+            blasting=False
         )
         self.input_monitor = SpikeMonitor(self.input_neurons)
         # connect to excitatory neurons
         synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), **AMPA_PARAMS)
         synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0])
-        synapse.w = self.net_dict['global_g'] * 0.1
+        synapse.w = 0.015
+        self.dopamine_modulated_synapse_idx.append(len(self.synapses))
         self.synapses.append(synapse)
         self.net_params.append(self.input_neurons)
         self.net_params.append(self.input_monitor)
+
+    def __connect_dopamine_synapses(self):
+        self.reward_synapses = []
+        for _i in self.dopamine_modulated_synapse_idx:
+            target = self.synapses[_i]
+            self.reward_synapses.append(Synapses(self.output_neurons[0], target, model='''''',
+                                            on_pre='''
+                                            d_post += (reward_value - expected_reward_pre)
+                                            ''',
+                                            method='exact'))
+            self.reward_synapses[-1].connect()
+
+            # - reward because 1 spiked
+            self.reward_synapses.append(Synapses(self.output_neurons[1], target, model='''''',
+                                            on_pre='''
+                                            d_post -= (reward_value - expected_reward_pre)
+                                            ''',
+                                            method='exact'))
+            self.reward_synapses[-1].connect()
+
+        self.net_params.append(self.reward_synapses)
 
 
     def run(self):
