@@ -32,6 +32,7 @@ for key, value in NET_DICT.items():
             raise ValueError(f"Unexpected shape of {key}: {value.shape}")
 
 NET_DICT['num_neurons'] = np.array([L_23_exc, L_23_pv, L_23_sst, L_23_vip])
+NET_DICT['global_g'] = 200.
 
 
 NEURON_DICT = ORIGINAL_NEURON_DICT
@@ -58,7 +59,7 @@ NEURON_MODEL = Equations(f'''
         g_L : siemens
         C_m : farad
         v_th : volt
-        v_rest : volt
+        v_reset : volt
         I_DC_input: amp
 
         I_ampa_ext = {g_ampa_ext}*nS*(v - {V_E}*mV)*s_ampa_ext : amp

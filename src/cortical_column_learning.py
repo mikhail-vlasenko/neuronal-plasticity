@@ -15,9 +15,9 @@ class Simulation:
         self.net_dict = net_dict
         self.neuron_dict = neuron_dict
         self.sample_duration = 100 * ms
-        self.epochs = 8
-        self.num_exposures = 10
-        self.wait_durations = 2
+        self.epochs = 10
+        self.num_exposures = 4
+        self.wait_durations = 0
         self.data_path = '../data/mini_sample.csv'
         self.in_connection_avg = 32
 
@@ -42,13 +42,13 @@ class Simulation:
                 self.net_dict['num_neurons'][i],
                 model=NEURON_MODEL,
                 threshold='v > v_th',
-                reset='v = v_rest',
+                reset='v = v_reset',
                 refractory=self.neuron_dict['tau_ref'][i],
                 method='euler'
             )
             population.v_th = self.neuron_dict['V_th'][i]
-            population.v_rest = self.neuron_dict['V_reset'][i]
-            population.v = self.neuron_dict['V_0'][i]
+            population.v_reset = self.neuron_dict['V_reset'][i]
+            population.v = self.neuron_dict['V_L'][i]
             population.V_L = self.neuron_dict['V_L'][i]
             population.C_m = self.neuron_dict['C_m'][i]
             population.g_L = self.neuron_dict['g_L'][i]
@@ -111,7 +111,7 @@ class Simulation:
         # connect to excitatory neurons
         synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), **AMPA_PARAMS)
         synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0])
-        synapse.w = self.net_dict['global_g'] * 10000
+        synapse.w = self.net_dict['global_g'] * 0.1
         self.synapses.append(synapse)
         self.net_params.append(self.input_neurons)
         self.net_params.append(self.input_monitor)
