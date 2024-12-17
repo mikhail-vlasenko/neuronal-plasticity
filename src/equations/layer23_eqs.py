@@ -91,7 +91,7 @@ dApre *= gmax
 ## Homeostasis
 tau_homeostasis = 1000*ms
 homeostasis_max = max_strength
-homeostasis_add = homeostasis_max / 10
+homeostasis_add = homeostasis_max / 20
 homeostasis_subtract = homeostasis_add * 2
 
 ## Dopamine signaling
@@ -163,7 +163,7 @@ VIP_MODEL = f'''
     s_gaba_tot_l23vip_post = w*s_gaba : 1 (summed)  
 ''' + _inhib_synapse_shared
 
-inhib_lr_coef = 0.05
+inhib_lr_coef = 0.0125
 # on pre, we should decrease inhibition,
 # as that will increase the amount of times on post is called, and achieve e-i balance
 gaba_on_pre = '''

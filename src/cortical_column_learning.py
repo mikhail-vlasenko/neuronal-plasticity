@@ -4,6 +4,7 @@ from tqdm import tqdm
 import math
 
 from Original_model.utils.utils import setup_loggers
+from src.connectivity_graph import visualize_network_connectivity
 from src.equations.layer23_eqs import *
 from src.equations.stdp_eqs import expected_reward_merge
 from src.input_from_csv import csv_input_neurons
@@ -19,14 +20,14 @@ class Simulation:
         self.net_dict = net_dict
         self.neuron_dict = neuron_dict
         self.sample_duration = 100 * ms
-        self.epochs = 64
+        self.epochs = 128
         self.num_exposures = 2
         self.multiply_input = 16
         self.wait_durations = 0
-        self.data_path = '../data/mini_sample.csv'
+        self.data_path = '../data/sample.csv'
         self.in_connection_avg = 32
         self.out_connection_avg = 32
-        self.weight_coef = 0.5
+        self.weight_coef = 0.75
         self.weight_std_coef = 0.5
 
         self.log = log
@@ -88,6 +89,7 @@ class Simulation:
 
     def __connect_populations(self):
         self.synapses = []
+        names = ['Excitatory', 'PV', 'SST', 'VIP']
         models = [get_ampa_model(), PV_MODEL, SST_MODEL, VIP_MODEL]
         on_pres = [ampa_on_pre, gaba_on_pre, gaba_on_pre, gaba_on_pre]
         on_posts = [ampa_on_post, gaba_on_post, gaba_on_post, gaba_on_post]
@@ -104,7 +106,8 @@ class Simulation:
                     on_pre=on_pres[m],
                     on_post=on_posts[m],
                     method='euler',
-                    delay=self.net_dict['delay']
+                    delay=self.net_dict['delay'],
+                    name=f'{names[m]}_{names[n]}'
                 )
                 connect_kwargs = {'p': connect_prob}
                 if m == n: connect_kwargs['condition'] = 'i != j'
@@ -124,12 +127,13 @@ class Simulation:
                 self.synapses.append(synapse)
         if hasattr(self, 'output_neurons'):
             synapse = Synapses(
-                self.pops[0], self.output_neurons, model=get_ampa_model(), **AMPA_PARAMS
+                self.pops[0], self.output_neurons, model=get_ampa_model(), name='Excitatory_Output', **AMPA_PARAMS
             )
             synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input // 2)
             synapse.w = f"rand() * max_strength * {self.weight_coef}"
-            state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(0, 512, 16)])
-            self.weight_monitors.append(state_monitor)
+            if PLOTTING_PARAMS.plot_heatmaps:
+                state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(0, 512, 16)])
+                self.weight_monitors.append(state_monitor)
             self.dopamine_modulated_synapse_idx.append(len(self.synapses))
             self.synapses.append(synapse)
 
@@ -158,7 +162,7 @@ class Simulation:
         )
         self.input_monitor = SpikeMonitor(self.input_neurons)
         # connect to excitatory neurons
-        synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), **AMPA_PARAMS)
+        synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), name='Input_Excitatory', **AMPA_PARAMS)
         synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input)
         synapse.w = f"rand() * max_strength * {self.weight_coef}"
         self.dopamine_modulated_synapse_idx.append(len(self.synapses))
@@ -167,7 +171,7 @@ class Simulation:
         self.net_params.append(self.input_monitor)
 
     def __connect_post_prediction_inhibition(self):
-        self.post_prediction_inhib_value = 0.1
+        self.post_prediction_inhib_value = 0.2
         self.post_prediction_inhibitors = []
         targets = self.pops + [self.output_neurons]
         for _i in range(len(targets)):

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
+def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 12)):
     """
     Visualize network connectivity as a graph with neurons spatially grouped by name
     and arrows for connections.
@@ -24,28 +24,51 @@ def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
     # Create directed graph
     G = nx.DiGraph()
 
-    # Colors for different neuron groups
-    colors = ['blue', 'green', 'orange', 'red']
+    if len(neuron_groups) == 4:
+        colors = ['blue', 'green', 'orange', 'red']
 
+        group_centers = {
+            'input': (0, 1),
+            'hidden': (0, 0.5),
+            'inhibitory': (0.5, 0.5),
+            'output': (0, 0)
+        }
+        color_map = {}
+
+    elif len(neuron_groups) == 6:
+        colors = ['blue', 'green', 'orange', 'peru', 'yellow', 'red']
+        # labels = ['Input', 'Excitatory', 'PV', 'SST', 'VIP', 'Output']
+
+        group_centers = {
+            'Input': (0, 2),
+            'Excitatory': (-0.25, 1),
+            'PV': (1.25, 0.5),
+            'SST': (1.5, 1),
+            'VIP': (1.25, 1.5),
+            'Output': (0, 0)
+        }
+        color_map = {
+            'Input': 'blue',
+            'Excitatory': 'green',
+            'PV': 'orange',
+            'SST': 'peru',
+            'VIP': 'yellow',
+            'Output': 'red'
+        }
+    else:
+        raise ValueError("The number of neuron groups should be 4 or 6.")
+
+    scale = 0.5
+    for name, (x, y) in group_centers.items():
+        group_centers[name] = (x * scale, y * scale)
     # Initialize position dictionaries and colors
     pos = {}
     node_colors = []
-    color_map = {}
-
-    assert len(neuron_groups) == 4, "This function is designed for 4 neuron groups"
-
-    group_centers = {
-        'input': (0, 1),
-        'hidden': (0, 0.5),
-        'inhibitory': (0.5, 0.5),
-        'output': (0, 0)
-    }
 
     # Add nodes for each neuron group with positions relative to group centers
     offset = 0
     for idx, (name, group) in enumerate(neuron_groups.items()):
         color = colors[idx % len(colors)]
-        color_map[name] = color
         center_x, center_y = group_centers[name]
 
         # Calculate positions in a circular pattern around group center
@@ -54,7 +77,7 @@ def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
             node_id = f"{name}_{i}"
             G.add_node(node_id)
 
-            if name in ['input', 'output']:
+            if name in ['Input', 'Output']:
                 # Create a small circular layout around the group center
                 radius = 0.1
                 angle = 2 * np.pi * i / num_neurons
@@ -63,7 +86,7 @@ def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
                     center_y + radius * np.sin(angle)
                 )
             else:
-                scale = 0.05 * np.sqrt(num_neurons)
+                scale = 0.03 * np.sqrt(num_neurons)
                 x = np.random.uniform(-scale, scale)
                 y = np.random.uniform(-scale, scale)
                 pos[node_id] = (center_x + x, center_y + y)
@@ -73,10 +96,8 @@ def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
         offset += len(group)
 
     # Add edges for each synapse group
-    edge_colors = []
     for name, synapse in synapses.items():
-        pre_group = name.split('->')[0]
-        post_group = name.split('->')[1]
+        pre_group, post_group = name.split('_')
 
         # Get the synapse indices
         i, j = synapse.i[:], synapse.j[:]
@@ -85,17 +106,19 @@ def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
         for pre, post in zip(i, j):
             pre_id = f"{pre_group}_{pre}"
             post_id = f"{post_group}_{post}"
-            G.add_edge(pre_id, post_id)
-            edge_colors.append(color_map[pre_group])
+            G.add_edge(pre_id, post_id, color=color_map[pre_group])
 
     # Create the plot
-    plt.figure(figsize=figsize, dpi=100)
+    plt.figure(figsize=figsize, dpi=200)
+
+    edges = G.edges()
+    edge_colors = [G[u][v]['color'] for u, v in edges]
 
     # Draw the network
     nx.draw(G, pos,
             node_color=node_colors,
-            node_size=50,
             edge_color=edge_colors,
+            node_size=50,
             arrows=True,
             arrowsize=10,
             width=0.5,
@@ -142,3 +165,21 @@ def visualize_network_connectivity(neuron_groups, synapses, figsize=(12, 8)):
 # plt.savefig('network_connectivity.png')
 # plt.show()
 # exit()
+
+    # neuron_groups = {
+    #     'Input': simulation.input_neurons,
+    #     'Excitatory': simulation.pops[0],
+    #     'PV': simulation.pops[1],
+    #     'SST': simulation.pops[2],
+    #     'VIP': simulation.pops[3],
+    #     'Output': simulation.output_neurons
+    # }
+    #
+    # synapses = {}
+    # for synapse in simulation.synapses:
+    #     synapses[f"{synapse.name}"] = synapse
+    #
+    # visualize_network_connectivity(neuron_groups, synapses)
+    # plt.savefig('network_connectivity.png')
+    # plt.show()
+    # exit()

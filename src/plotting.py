@@ -10,9 +10,10 @@ from matplotlib import pyplot as plt
 class PlottingParams:
     simulation_duration: int = 0 * ms
     plot_from: int = 0
-    plot_heatmaps: bool = True
+    spike_raster_gaps: int = 10
+    plot_heatmaps: bool = False
     plot_adaptation: bool = False
-    plot_currents: bool = True
+    plot_currents: bool = False
     minimal_reporting: bool = False
     xlim: list = None
 
@@ -34,7 +35,7 @@ def get_plots_iterator():
     elif PLOTTING_PARAMS.plot_heatmaps:
         height_ratios = [1, 1, 1, 1, 2]
     else:
-        height_ratios = [1, 1, 2]
+        height_ratios = [1, 1, 4]
     return fig, iter(fig.add_gridspec(len(height_ratios), 1, height_ratios=height_ratios))
 
 def plot_dopamine(ax, dopamine_monitor):
@@ -117,7 +118,7 @@ def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_mon
 def spike_raster(
         ax,
         input_monitor,
-        neuron_monitor: Union[SpikeMonitor, List[SpikeMonitor]],
+        neuron_monitor: SpikeMonitor,
         inhibitory_monitor: Union[SpikeMonitor, List[SpikeMonitor]],
         output_monitor
 ):
@@ -125,20 +126,22 @@ def spike_raster(
         mask = ((monitor.t / ms) >= PLOTTING_PARAMS.plot_from)
         return monitor.t[mask] / ms, monitor.i[mask] + offset
 
-    monitors = [input_monitor, neuron_monitor, inhibitory_monitor, output_monitor]
     colors = ['blue', 'green', 'orange', 'red']
     labels = ['Input', 'Excitatory', 'Inhibitory', 'Output']
+    if isinstance(inhibitory_monitor, list):
+        monitors = [input_monitor, neuron_monitor, *inhibitory_monitor, output_monitor]
+        colors = ['blue', 'green', 'orange', 'peru', 'yellow', 'red']
+        labels = ['Input', 'Excitatory', 'PV', 'SST', 'VIP', 'Output']
+    else:
+        monitors = [input_monitor, neuron_monitor, inhibitory_monitor, output_monitor]
 
-    offset = 0
-    for monitor_group, color, label in zip(monitors, colors, labels):
-        if monitor_group is None:
+    offset = PLOTTING_PARAMS.spike_raster_gaps
+    for monitor, color, label in zip(monitors, colors, labels):
+        if monitor is None:
             continue
-        if not isinstance(monitor_group, list):
-            monitor_group = [monitor_group]
-        for monitor in monitor_group:
-            ax.scatter(*crop_data(monitor, offset),
-                       c=color, label=label, s=20)
-            offset += len(monitor.source)
+        ax.scatter(*crop_data(monitor, offset),
+                   c=color, label=label, s=20)
+        offset += len(monitor.source) + PLOTTING_PARAMS.spike_raster_gaps
 
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Neuron index')
