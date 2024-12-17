@@ -10,8 +10,9 @@ from matplotlib import pyplot as plt
 class PlottingParams:
     simulation_duration: int = 0 * ms
     plot_from: int = 0
-    plot_heatmaps: bool = False
+    plot_heatmaps: bool = True
     plot_adaptation: bool = False
+    plot_currents: bool = True
     minimal_reporting: bool = False
     xlim: list = None
 
@@ -45,7 +46,7 @@ def plot_dopamine(ax, dopamine_monitor):
     ax.set_title('Dopamine level over time')
 
 def plot_output_potentials(ax, output_state_monitor, vt):
-    if PLOTTING_PARAMS.plot_adaptation:
+    if PLOTTING_PARAMS.plot_adaptation or PLOTTING_PARAMS.plot_currents:
         ax12 = ax.twinx()
 
     # Plot potential on the left y-axis
@@ -57,13 +58,20 @@ def plot_output_potentials(ax, output_state_monitor, vt):
             sns.lineplot(x=output_state_monitor.t / ms,
                          y=output_state_monitor.adaptation[neuron_idx] / (mV / second),
                          color='blue', ax=ax12)
+        if PLOTTING_PARAMS.plot_currents:
+            sns.lineplot(x=output_state_monitor.t / ms,
+                         y=output_state_monitor.s_gaba_prediction[neuron_idx],
+                         color='red', ax=ax12)
     ax.axhline(vt / mV, linestyle='dashed', color='gray', label='Threshold')
     ax.set_xlim(PLOTTING_PARAMS.xlim)
     ax.set_ylabel('Output neuron\npotential v(t) (mV)')
-    ax.set_ylim([-90, -50])
+    ax.set_ylim([-90, vt / mV + 5])
     if PLOTTING_PARAMS.plot_adaptation:
         ax12.set_ylabel('Adaptation (mV)', color='blue')
         ax12.tick_params(axis='y', labelcolor='blue')
+    if PLOTTING_PARAMS.plot_currents:
+        ax12.set_ylabel('GABA current (nA)', color='red')
+        ax12.tick_params(axis='y', labelcolor='red')
     ax.legend(loc='upper left')
 
 def plot_heatmaps(ax_input, ax_output, input_synapse_monitor, output_synapse_monitor, eligibility_trace=False):

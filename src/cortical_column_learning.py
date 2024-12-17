@@ -19,13 +19,15 @@ class Simulation:
         self.net_dict = net_dict
         self.neuron_dict = neuron_dict
         self.sample_duration = 100 * ms
-        self.epochs = 10
-        self.num_exposures = 3
+        self.epochs = 64
+        self.num_exposures = 2
         self.multiply_input = 16
         self.wait_durations = 0
         self.data_path = '../data/mini_sample.csv'
         self.in_connection_avg = 32
-        self.out_connection_avg = 128
+        self.out_connection_avg = 32
+        self.weight_coef = 0.5
+        self.weight_std_coef = 0.5
 
         self.log = log
         self.net = None
@@ -43,6 +45,7 @@ class Simulation:
         # self.__connect_poisson_bg_input()
         self.__connect_training_input()
         self.__connect_dopamine_synapses()
+        self.__connect_post_prediction_inhibition()
         log.info('Initialization complete')
 
     def __post_init_population(self, population, i):
@@ -78,7 +81,7 @@ class Simulation:
         )
         self.__post_init_population(self.output_neurons, 0)
         self.output_monitor = SpikeMonitor(self.output_neurons)
-        self.output_state_monitor = StateMonitor(self.output_neurons, ['v', 'adaptation'], record=[0, 1])
+        self.output_state_monitor = StateMonitor(self.output_neurons, ['v', 'adaptation', 's_gaba_prediction', 's_ampa_tot'], record=[0, 1])
         self.net_params.append(self.output_neurons)
         self.net_params.append(self.output_monitor)
         self.net_params.append(self.output_state_monitor)
@@ -109,19 +112,24 @@ class Simulation:
 
                 weight = strength / (connect_prob * self.net_dict['num_neurons'][m])
                 # self.log.info(f'Weight for {m} -> {n} connection: {weight}')
-                synapse.w = weight
+                synapse.w = f"{weight} + randn() * {self.weight_std_coef * weight}"
                 if m == 0:
-                    state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(128)])
-                    self.weight_monitors.append(state_monitor)
                     self.dopamine_modulated_synapse_idx.append(len(self.synapses))
+                else:
+                    # inhibitory synapses, define homeostasis variables
+                    synapse.baseline_inhib_w = weight
+                    synapse.amplitude = 2 * weight
+                    synapse.learning_rate = inhib_lr_coef * weight
 
                 self.synapses.append(synapse)
         if hasattr(self, 'output_neurons'):
             synapse = Synapses(
                 self.pops[0], self.output_neurons, model=get_ampa_model(), **AMPA_PARAMS
             )
-            synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0])
-            synapse.w = 0.015
+            synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input // 2)
+            synapse.w = f"rand() * max_strength * {self.weight_coef}"
+            state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(0, 512, 16)])
+            self.weight_monitors.append(state_monitor)
             self.dopamine_modulated_synapse_idx.append(len(self.synapses))
             self.synapses.append(synapse)
 
@@ -152,23 +160,28 @@ class Simulation:
         # connect to excitatory neurons
         synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), **AMPA_PARAMS)
         synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input)
-        synapse.w = 0.015
+        synapse.w = f"rand() * max_strength * {self.weight_coef}"
         self.dopamine_modulated_synapse_idx.append(len(self.synapses))
         self.synapses.append(synapse)
         self.net_params.append(self.input_neurons)
         self.net_params.append(self.input_monitor)
 
     def __connect_post_prediction_inhibition(self):
-        self.post_prediction_inhib_value = 1
-        post_prediction_inhibitors = []
-        for target in self.pops + [self.output_neurons]:
-            post_prediction_inhibitors.append(Synapses(
-                self.output_neurons, target, model='''''',
+        self.post_prediction_inhib_value = 0.1
+        self.post_prediction_inhibitors = []
+        targets = self.pops + [self.output_neurons]
+        for _i in range(len(targets)):
+            if _i == len(targets) - 1:
+                # inhibit output way more
+                self.post_prediction_inhib_value *= 5
+            self.post_prediction_inhibitors.append(Synapses(
+                self.output_neurons, targets[_i], model='''''',
                 on_pre=f'''s_gaba_prediction += {self.post_prediction_inhib_value}''',
                 # delay=2*ms,
                 method='exact'
             ))
-            post_prediction_inhibitors[-1].connect()
+            self.post_prediction_inhibitors[-1].connect()
+        self.net_params.append(self.post_prediction_inhibitors)
 
     def __connect_dopamine_synapses(self):
         self.reward_synapses = []
@@ -234,4 +247,4 @@ def main(seed=0):
 
 
 if __name__ == '__main__':
-    main()
+    main(1)

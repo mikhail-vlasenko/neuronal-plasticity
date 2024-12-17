@@ -90,8 +90,8 @@ dApre *= gmax
 
 ## Homeostasis
 tau_homeostasis = 1000*ms
-homeostasis_add = 0.05
-homeostasis_max = 0.5
+homeostasis_max = max_strength
+homeostasis_add = homeostasis_max / 10
 homeostasis_subtract = homeostasis_add * 2
 
 ## Dopamine signaling
@@ -106,7 +106,7 @@ _ampa_counter = 0
 def get_ampa_model():
     global _ampa_counter
     eq = Equations(f'''
-        s_ampa_tot_{_ampa_counter}_post = w*s_ampa : 1 (summed)  
+        s_ampa_tot_{_ampa_counter}_post = (w + homeostasis_s) * s_ampa : 1 (summed)  
         ds_ampa/dt = - s_ampa/({tau_ampa}*ms) : 1 (clock-driven)
         dhomeostasis_s/dt = -homeostasis_s / tau_homeostasis : 1 (clock-driven)
         
@@ -126,7 +126,6 @@ ampa_on_pre = '''
     c = clip(c + Apost, -gmax, gmax)
     homeostasis_s += homeostasis_add
     homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
-    s_ampa += homeostasis_s
 '''
 
 ampa_on_post = '''
@@ -147,6 +146,9 @@ AMPA_PARAMS = {
 _inhib_synapse_shared = f'''
     ds_gaba/dt = - s_gaba/({tau_gaba}*ms) : 1 (clock-driven)
     w : 1
+    baseline_inhib_w : 1
+    amplitude : 1
+    learning_rate : 1
 '''
 
 PV_MODEL = f'''
@@ -161,13 +163,19 @@ VIP_MODEL = f'''
     s_gaba_tot_l23vip_post = w*s_gaba : 1 (summed)  
 ''' + _inhib_synapse_shared
 
+inhib_lr_coef = 0.05
+# on pre, we should decrease inhibition,
+# as that will increase the amount of times on post is called, and achieve e-i balance
 gaba_on_pre = '''
+    w -= exp((w - baseline_inhib_w)/amplitude)*learning_rate
+    w = clip(w, 0, 1000)
     s_gaba += 1
 '''
 
-gaba_on_post = ''
-# todo: add homeostasis
-
+# on post, we should increase inhibition, as it means the excitatory (post) neuron is firing too much
+gaba_on_post = '''
+    w += exp(-(w - baseline_inhib_w)/amplitude)*learning_rate
+'''
 
 tauadapt = 50*ms
 v_adaptation = 10*mV
