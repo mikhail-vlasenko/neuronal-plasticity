@@ -14,7 +14,7 @@ class PlottingParams:
     plot_heatmaps: bool = False
     plot_adaptation: bool = False
     plot_currents: bool = False
-    minimal_reporting: bool = False
+    minimal_reporting: bool = True
     xlim: list = None
 
     def update(self):

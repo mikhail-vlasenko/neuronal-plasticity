@@ -32,7 +32,7 @@ for key, value in NET_DICT.items():
             raise ValueError(f"Unexpected shape of {key}: {value.shape}")
 
 NET_DICT['num_neurons'] = np.array([L_23_exc, L_23_pv, L_23_sst, L_23_vip])
-NET_DICT['global_g'] = 200.
+NET_DICT['global_g'] = 250.
 
 
 NEURON_DICT = ORIGINAL_NEURON_DICT
@@ -49,7 +49,7 @@ tau_gaba = 5.
 g_gaba = 1. * NET_DICT['global_g']
 
 
-ampa_components = [f's_ampa_tot_{i}' for i in range(5)]
+ampa_components = [f's_ampa_tot_{i}' for i in range(7)]
 _ampa_inits = '\n'.join([f'{comp} : 1' for comp in ampa_components])
 NEURON_MODEL = Equations(f'''
         dv/dt = (-g_L*(v - V_L) - I_syn)/C_m: volt (unless refractory)
@@ -81,18 +81,9 @@ NEURON_MODEL = Equations(f'''
 
 taupre = 20*ms
 taupost = taupre
-max_strength = 0.02
-gmax = 0.5 * max_strength
-dApre = 0.1
-dApost = -dApre * taupre / taupost * 1.05
-dApost *= gmax
-dApre *= gmax
 
 ## Homeostasis
 tau_homeostasis = 1000*ms
-homeostasis_max = max_strength
-homeostasis_add = homeostasis_max / 20
-homeostasis_subtract = homeostasis_add * 2
 
 ## Dopamine signaling
 tauc = 250*ms
@@ -119,28 +110,41 @@ def get_ampa_model():
     _ampa_counter += 1
     return eq
 
-ampa_on_pre = '''
-    w = clip(w, 0, max_strength)
-    s_ampa += 1
-    Apre += dApre
-    c = clip(c + Apost, -gmax, gmax)
-    homeostasis_s += homeostasis_add
-    homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
-'''
+def get_ampa_pre_post(max_strength):
+    homeostasis_max = max_strength
+    homeostasis_add = homeostasis_max / 20
+    homeostasis_subtract = homeostasis_add * 2
+    gmax = 0.5 * max_strength
+    dApre = 0.1 * gmax
+    dApost = -dApre * taupre / taupost * 1.05
 
-ampa_on_post = '''
-    Apost += dApost
-    c = clip(c + Apre, -gmax, gmax)
-    homeostasis_s -= homeostasis_subtract
-    homeostasis_s = clip(homeostasis_s, 0, homeostasis_max)
-'''
+    ampa_on_pre = f'''
+        w = clip(w, 0, {max_strength})
+        s_ampa += 1
+        Apre += {dApre}
+        c = clip(c + Apost, -{gmax}, {gmax})
+        homeostasis_s += {homeostasis_add}
+        homeostasis_s = clip(homeostasis_s, 0, {homeostasis_max})
+    '''
 
-AMPA_PARAMS = {
-    'on_pre': ampa_on_pre,
-    'on_post': ampa_on_post,
-    'method': 'euler',
-    'delay': NET_DICT['delay']
-}
+    ampa_on_post = f'''
+        Apost += {dApost}
+        c = clip(c + Apre, -{gmax}, {gmax})
+        homeostasis_s -= {homeostasis_subtract}
+        homeostasis_s = clip(homeostasis_s, 0, {homeostasis_max})
+    '''
+    return ampa_on_pre, ampa_on_post
+
+def get_ampa_params(max_strength):
+    model = get_ampa_model()
+    ampa_on_pre, ampa_on_post = get_ampa_pre_post(max_strength)
+    return {
+        'model': model,
+        'on_pre': ampa_on_pre,
+        'on_post': ampa_on_post,
+        'method': 'euler',
+        'delay': NET_DICT['delay']
+    }
 
 
 _inhib_synapse_shared = f'''

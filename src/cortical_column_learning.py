@@ -20,15 +20,16 @@ class Simulation:
         self.net_dict = net_dict
         self.neuron_dict = neuron_dict
         self.sample_duration = 100 * ms
-        self.epochs = 128
+        self.epochs = 2
         self.num_exposures = 2
-        self.multiply_input = 16
+        self.multiply_input = 1
         self.wait_durations = 0
         self.data_path = '../data/sample.csv'
         self.in_connection_avg = 32
         self.out_connection_avg = 32
-        self.weight_coef = 0.75
+        self.weight_coef = 0.5
         self.weight_std_coef = 0.5
+        self.in_out_max_strength = 0.35
 
         self.log = log
         self.net = None
@@ -90,30 +91,37 @@ class Simulation:
     def __connect_populations(self):
         self.synapses = []
         names = ['Excitatory', 'PV', 'SST', 'VIP']
-        models = [get_ampa_model(), PV_MODEL, SST_MODEL, VIP_MODEL]
-        on_pres = [ampa_on_pre, gaba_on_pre, gaba_on_pre, gaba_on_pre]
-        on_posts = [ampa_on_post, gaba_on_post, gaba_on_post, gaba_on_post]
+        models = [None, PV_MODEL, SST_MODEL, VIP_MODEL]
+
         for n, target_pop in enumerate(self.pops):
             for m, source_pop in enumerate(self.pops):
                 connect_prob = self.net_dict['connect_probs'][n][m]
                 if connect_prob == 0:
                     continue
                 strength = self.net_dict['synaptic_strength'][n][m]
+                weight = strength / (connect_prob * self.net_dict['num_neurons'][m])
 
+                if m == 0:
+                    # ampa synapses
+                    synapse_params = get_ampa_params(weight * 2)
+                else:
+                    # gaba synapses
+                    synapse_params = {
+                        'model': models[m],
+                        'on_pre': gaba_on_pre,
+                        'on_post': gaba_on_post,
+                        'method': 'euler',
+                        'delay': NET_DICT['delay']
+                    }
                 synapse = Synapses(
                     source_pop, target_pop,
-                    model=models[m],
-                    on_pre=on_pres[m],
-                    on_post=on_posts[m],
-                    method='euler',
-                    delay=self.net_dict['delay'],
-                    name=f'{names[m]}_{names[n]}'
+                    name=f'{names[m]}_{names[n]}',
+                    **synapse_params,
                 )
                 connect_kwargs = {'p': connect_prob}
                 if m == n: connect_kwargs['condition'] = 'i != j'
                 synapse.connect(**connect_kwargs)
 
-                weight = strength / (connect_prob * self.net_dict['num_neurons'][m])
                 # self.log.info(f'Weight for {m} -> {n} connection: {weight}')
                 synapse.w = f"{weight} + randn() * {self.weight_std_coef * weight}"
                 if m == 0:
@@ -127,12 +135,12 @@ class Simulation:
                 self.synapses.append(synapse)
         if hasattr(self, 'output_neurons'):
             synapse = Synapses(
-                self.pops[0], self.output_neurons, model=get_ampa_model(), name='Excitatory_Output', **AMPA_PARAMS
+                self.pops[0], self.output_neurons, name='Excitatory_Output', **get_ampa_params(self.in_out_max_strength)
             )
-            synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input // 2)
-            synapse.w = f"rand() * max_strength * {self.weight_coef}"
+            synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0])
+            synapse.w = f"rand() * {self.in_out_max_strength} * {self.weight_coef}"
             if PLOTTING_PARAMS.plot_heatmaps:
-                state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(0, 512, 16)])
+                state_monitor = StateMonitor(synapse, ['w', 'c'], record=[_i for _i in range(32)])
                 self.weight_monitors.append(state_monitor)
             self.dopamine_modulated_synapse_idx.append(len(self.synapses))
             self.synapses.append(synapse)
@@ -162,9 +170,11 @@ class Simulation:
         )
         self.input_monitor = SpikeMonitor(self.input_neurons)
         # connect to excitatory neurons
-        synapse = Synapses(self.input_neurons, self.pops[0], model=get_ampa_model(), name='Input_Excitatory', **AMPA_PARAMS)
+        synapse = Synapses(
+            self.input_neurons, self.pops[0], name='Input_Excitatory', **get_ampa_params(self.in_out_max_strength)
+        )
         synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input)
-        synapse.w = f"rand() * max_strength * {self.weight_coef}"
+        synapse.w = f"rand() * {self.in_out_max_strength} * {self.weight_coef}"
         self.dopamine_modulated_synapse_idx.append(len(self.synapses))
         self.synapses.append(synapse)
         self.net_params.append(self.input_neurons)
