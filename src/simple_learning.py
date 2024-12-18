@@ -96,7 +96,7 @@ if not PLOTTING_PARAMS.minimal_reporting:
     monitors += [output_state_monitor, input_synapse_monitor, output_synapse_monitor]
 
 post_prediction_inhibitors = []
-for target, value in zip([neurons, output_neurons], [1, 3]):
+for target, value in zip([neurons, output_neurons], [0, 3]):
     post_prediction_inhibitors.append(Synapses(output_neurons, target, model='''''',
                                         on_pre=f'''ge_post -= {value}''',
                                         # delay=2*ms,

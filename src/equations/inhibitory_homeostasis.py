@@ -1,6 +1,6 @@
 learning_rate = 0.05
 exc_to_inhib_ratio = 1  # firing ratio that balances out the strength update
-amplitude = 2
+amplitude = 1
 inhib_s_initial = -1
 baseline_inhib_s = inhib_s_initial
 

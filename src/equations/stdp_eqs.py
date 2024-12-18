@@ -1,7 +1,7 @@
 from brian2 import ms, mV
 
 ## Neurons
-taum = 10*ms
+taum = 20*ms
 Ee = 0*mV    # reversal potential
 vt = -54*mV  # threshold potential
 vr = -60*mV  # reset potential
@@ -13,13 +13,13 @@ v_adaptation = 10*mV
 output_neuron_rate_growth = 0.
 
 ## Noise
-noise_sigma = 0*mV
+noise_sigma = 10*mV
 
 ## STDP
 taupre = 20*ms
 taupost = taupre
 gmax = 0.5
-max_strength = 1
+max_strength = 0.5
 dApre = 0.1  # this is basically by how much the eligibility trace increases
 dApost = -dApre * taupre / taupost * 1.05
 dApost *= gmax
