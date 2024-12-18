@@ -101,12 +101,12 @@ if __name__ == '__main__':
     distributed = os.getenv("OPTUNA_DISTRIBUTED", False)
     storage = None
     if distributed:
-        storage = optuna.storages.RDBStorage(
-            url="sqlite:///:memory:",
-            engine_kwargs={"pool_size": 16, "connect_args": {"timeout": 10}},
+        study = optuna.load_study(
+            study_name="nddl", storage="sqlite:///optuna_db1.db"
         )
         print("Distributed mode initialized")
-    study = optuna.create_study(storage=storage)
+    else:
+        study = optuna.create_study()
     study.optimize(objective, n_trials=10)  # n_trials is for each process
     print("Results:")
     print(study.best_value)
