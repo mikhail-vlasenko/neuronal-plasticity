@@ -223,13 +223,13 @@ class Simulation:
             target = self.synapses[_i]
             # + reward because 0 spiked (reward is negative for samples with answer 1)
             self.reward_synapses.append(Synapses(self.output_neurons[0], target, model='''''',
-                                        on_pre='''d_post += (reward_value - expected_reward_pre)''',
+                                        on_pre='''d_post += (reward_value_pre - expected_reward_pre)''',
                                         method='exact'))
             self.reward_synapses[-1].connect()
 
             # - reward because 1 spiked
             self.reward_synapses.append(Synapses(self.output_neurons[1], target, model='''''',
-                                        on_pre='''d_post -= (reward_value - expected_reward_pre)''',
+                                        on_pre='''d_post += (reward_value_pre - expected_reward_pre)''',
                                         method='exact'))
             self.reward_synapses[-1].connect()
         self.net_params.append(self.reward_synapses)
@@ -242,15 +242,22 @@ class Simulation:
 
     def run(self):
         self.create_network()
+        global_expected_reward = 0
         kill_threshold = -0.8
         for sample_i in tqdm(range(math.floor(self.duration / self.sample_duration))):
             # assign negative reward to the second output neuron. its synapses subtract the reward
-            reward_value = self.epsilon_dopa if self.targets[sample_i] == 0 else -self.epsilon_dopa
+            _reward_value = self.epsilon_dopa if self.targets[sample_i] == 0 else -self.epsilon_dopa
+            self.output_neurons.reward_value[0] = _reward_value
+            self.output_neurons.reward_value[1] = -_reward_value
+            self.output_neurons.expected_reward = global_expected_reward
+            self.output_neurons.obtained_reward = 0
+            print(sample_i, _reward_value - global_expected_reward, -_reward_value - global_expected_reward)
+
             self.net.run(self.sample_duration)
-            self.output_neurons.expected_reward[0], self.output_neurons.expected_reward[1] = (
-                expected_reward_merge(self.output_neurons.expected_reward))
-            print(self.output_neurons.expected_reward)
-            exp_reward = self.output_neurons.expected_reward[0] / self.epsilon_dopa
+            global_expected_reward = expected_reward_merge(self.output_neurons.obtained_reward, global_expected_reward)
+
+            exp_reward = global_expected_reward / self.epsilon_dopa
+            print(exp_reward)
             if exp_reward > 0.95:
                 print(f'Well-trained at iteration {sample_i}')
 
@@ -268,7 +275,7 @@ def main(seed=0):
     simulation.run()
 
     PLOTTING_PARAMS.simulation_duration = simulation.duration
-    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 2000)
+    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 300)
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()

@@ -90,7 +90,6 @@ tauc = 250*ms
 taud = 10*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
 
-expected_reward_change_rate = 0.25
 
 _ampa_counter = 0
 def get_ampa_model():
@@ -188,6 +187,8 @@ output_neuron_model = Equations(f'''
         dv/dt = (-g_L*(v - V_L) - I_syn)/C_m: volt (unless refractory)
         I_syn = I_ampa_rec + I_gaba : amp
         
+        reward_value : 1
+        obtained_reward : 1
         expected_reward : 1
 
         V_L : volt
@@ -210,7 +211,7 @@ OUTPUT_NEURON_PARAMS = {
     'model': output_neuron_model,
     'threshold': 'v > v_th',
     'reset': '''
-        expected_reward += expected_reward_change_rate * (reward_value - expected_reward)
+        obtained_reward = reward_value
         v = v_reset
     ''',
     'refractory': '5*ms',

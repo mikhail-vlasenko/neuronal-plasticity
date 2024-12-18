@@ -117,12 +117,13 @@ OUTPUT_NEURON_PARAMS = {
     'method': 'euler'
 }
 
-def expected_reward_merge(expected):
+def expected_reward_merge(obtained, expected):
     """
     Takes rewards from two output neurons, where expected[0] is the expected reward for the first neuron.
     expected[0] is positive if the first neuron is predicting well.
     expected[1] is negative if the second neuron is predicting well.
     Returns two new expectations by combining the success statistics of both neurons.
     """
-    combined = (expected[0] - expected[1]) / 2
-    return combined, -combined
+    new_rewards = obtained[0] + obtained[1]  # only one can be positive and only one can be negative
+    expected += expected_reward_change_rate * (new_rewards - expected)
+    return expected
