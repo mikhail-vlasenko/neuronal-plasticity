@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=NddlOptuna
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=19:59:00
+#SBATCH --output=outputs/slurm_output_%A.out
+
+module purge
+module load 2022
+module load Anaconda3/2022.05
+
+conda create -n optuna_env python=3.10.12
+source activate optuna_env
+
+export PYTHONPATH="${PYTHONPATH}:/home/mvlasenko/neuronal-plasticity"
+export OPTUNA_DISTRIBUTED=true
+cd /home/mvlasenko/neuronal-plasticity/src || exit
+python3 hyper_search.py

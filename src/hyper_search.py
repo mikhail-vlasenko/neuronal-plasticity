@@ -20,10 +20,11 @@ def objective(trial):
     log.addHandler(null_handler)
     log.propagate = False
 
-    success_threshold = 0.8
+    success_threshold = 0.925
     kill_threshold = -0.8
     initial_iters = 16
     epochs = 32
+    seeds = [0, 1]
     data_path = '../data/sample.csv'
 
     # Network connectivity parameters
@@ -51,51 +52,53 @@ def objective(trial):
     gmax_coef = trial.suggest_float("gmax_coef", 0.1, 0.9)
     dA_coef = trial.suggest_float("dA_coef", 0.01, 0.3)
 
-    np.random.seed(1)  # todo: multiple seeds
+    def run_for_seed(seed):
+        np.random.seed(seed)
+        simulation = Simulation(
+            NET_DICT, NEURON_DICT, log,
+            epochs=epochs, data_path=data_path,
+            in_connection_avg=in_connection_avg, out_connection_avg=out_connection_avg,
+            weight_coef=weight_coef, weight_std_coef=weight_std_coef, in_out_max_strength=in_out_max_strength,
+            post_prediction_inhib_value=post_prediction_inhib_value, epsilon_dopa=epsilon_dopa, hom_add_coef=hom_add_coef,
+            hom_subtract_coef=hom_subtract_coef, gmax_coef=gmax_coef, dA_coef=dA_coef
+        )
+        simulation.create_network()
+        total_iters = math.floor(simulation.duration / simulation.sample_duration)
+        for sample_i in range(initial_iters):
+            simulation.set_reward(sample_i)
+            simulation.net.run(simulation.sample_duration)
+            simulation.update_expected_reward()
 
-    simulation = Simulation(
-        NET_DICT, NEURON_DICT, log,
-        epochs=epochs, data_path=data_path,
-        in_connection_avg=in_connection_avg, out_connection_avg=out_connection_avg,
-        weight_coef=weight_coef, weight_std_coef=weight_std_coef, in_out_max_strength=in_out_max_strength,
-        post_prediction_inhib_value=post_prediction_inhib_value, epsilon_dopa=epsilon_dopa, hom_add_coef=hom_add_coef,
-        hom_subtract_coef=hom_subtract_coef, gmax_coef=gmax_coef, dA_coef=dA_coef
-    )
-    simulation.create_network()
-    total_iters = math.floor(simulation.duration / simulation.sample_duration)
-    for sample_i in range(initial_iters):
-        simulation.set_reward(sample_i)
-        simulation.net.run(simulation.sample_duration)
-        simulation.update_expected_reward()
-
-    num_spikes = simulation.count_out_spikes()
-    if num_spikes > initial_iters * 1.25 or num_spikes < initial_iters / 2:
-        print(f'Killed at initial num spikes: {num_spikes}')
-        return 3  # optuna needs to minimize the objective
-
-
-    exp_reward = simulation.expected_reward / simulation.epsilon_dopa
-    if exp_reward > success_threshold:
-        print(f'Trained too early. Expected reward: {exp_reward}')
-        return 1.5
-
-    for sample_i in range(initial_iters, total_iters):
-        simulation.set_reward(sample_i)
-        simulation.net.run(simulation.sample_duration)
-        simulation.update_expected_reward()
+        num_spikes = simulation.count_out_spikes()
+        if num_spikes > initial_iters * 1.25 or num_spikes < initial_iters / 2:
+            print(f'Killed at initial num spikes: {num_spikes}')
+            return 3  # optuna needs to minimize the objective
 
         exp_reward = simulation.expected_reward / simulation.epsilon_dopa
-        print(f'Expected reward at iteration {sample_i}: {exp_reward}')
         if exp_reward > success_threshold:
-            print(f'Well-trained at iteration {sample_i}')
-            return sample_i / total_iters
+            print(f'Well-trained at initial stage expected reward: {exp_reward}')
+            return 0.5
 
-        if exp_reward < kill_threshold or simulation.count_out_spikes() < sample_i / 2:
-            print(f'Killed at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {simulation.count_out_spikes()}')
-            return 3
+        for sample_i in range(initial_iters, total_iters):
+            simulation.set_reward(sample_i)
+            simulation.net.run(simulation.sample_duration)
+            simulation.update_expected_reward()
 
-    print(f'Final expected reward: {exp_reward}')
-    return 2 - exp_reward  # larger than any well-trained value
+            exp_reward = simulation.expected_reward / simulation.epsilon_dopa
+            print(f'Expected reward at iteration {sample_i}: {exp_reward}')
+            if exp_reward > success_threshold:
+                print(f'Well-trained at iteration {sample_i}')
+                return sample_i / total_iters
+
+            if exp_reward < kill_threshold or simulation.count_out_spikes() < sample_i / 2:
+                print(f'Killed at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {simulation.count_out_spikes()}')
+                return 3
+
+        print(f'Final expected reward: {exp_reward}')
+        return 2 - exp_reward  # larger than any well-trained value
+
+    results = [run_for_seed(seed) for seed in seeds]
+    return np.mean(results)
 
 
 STUDY_NAME = "nddl"

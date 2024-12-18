@@ -273,11 +273,11 @@ class Simulation:
 
 
 def main(seed=0):
-    # params = {'in_connection_avg': 53.71756093750615, 'out_connection_avg': 62.44292571783447, 'weight_coef': 0.18821712718922542, 'in_out_max_strength': 0.5301742137203809, 'post_prediction_inhib_value': 0.26487145120938077, 'epsilon_dopa': 0.001246196330672366, 'hom_add_coef': 26.80872298042561, 'hom_subtract_coef': 4.335327144480162, 'gmax_coef': 0.3837062036167356, 'dA_coef': 0.06682441175897401}
-    # params = {'in_connection_avg': 34.572228791930954, 'out_connection_avg': 25.03500610742471, 'weight_coef': 0.7862889750552065, 'in_out_max_strength': 0.30132928048344865, 'post_prediction_inhib_value': 0.20977924944679194, 'epsilon_dopa': 0.005367558528667768, 'hom_add_coef': 19.662464119313952, 'hom_subtract_coef': 2.8909728000014123, 'gmax_coef': 0.6984370340147569, 'dA_coef': 0.15674494319660678}
-    params = {'in_connection_avg': 33.38692778741311, 'out_connection_avg': 54.594570848235975, 'weight_coef': 0.47962878331113645, 'in_out_max_strength': 0.47320195809199384, 'post_prediction_inhib_value': 0.21538093357581117, 'epsilon_dopa': 0.0015630246600834763, 'hom_add_coef': 27.395706014981126, 'hom_subtract_coef': 4.402953839380141, 'gmax_coef': 0.5934098846483593, 'dA_coef': 0.28873172251878015}
-    params['epochs'] = 10
-    params['data_path'] = '../data/mini_sample.csv'
+    # params = {'in_connection_avg': 63.61493174793468, 'out_connection_avg': 43.5554992226015, 'weight_coef': 0.2754978971096503, 'in_out_max_strength': 0.3326309275202886, 'post_prediction_inhib_value': 0.20316439497369881, 'epsilon_dopa': 0.03861273348008514, 'hom_add_coef': 14.59113587079569, 'hom_subtract_coef': 1.7771771154755764, 'gmax_coef': 0.535232155930282, 'dA_coef': 0.08359228568155307}
+    # iter 113
+    params = {'in_connection_avg': 36.75938701607436, 'out_connection_avg': 38.31586841874557, 'weight_coef': 0.3478002611515175, 'in_out_max_strength': 0.3579144843925931, 'post_prediction_inhib_value': 0.0830196600114798, 'epsilon_dopa': 0.008015934444846762, 'hom_add_coef': 11.252674808682224, 'hom_subtract_coef': 4.856393272889642, 'gmax_coef': 0.2605735865010971, 'dA_coef': 0.02362831541590541}
+    params['epochs'] = 16
+    params['data_path'] = '../data/sample.csv'
     np.random.seed(seed)
     log = setup_loggers('')
 
