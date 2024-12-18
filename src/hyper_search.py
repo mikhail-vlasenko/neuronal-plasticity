@@ -13,7 +13,7 @@ from src.equations.layer23_eqs import *
 from src.equations.stdp_eqs import expected_reward_merge
 
 
-def objective(trial):
+def objective(trial: optuna.Trial):
     log = logging.getLogger(__name__)
     log.setLevel(logging.INFO)
     null_handler = logging.NullHandler()
@@ -53,6 +53,9 @@ def objective(trial):
     dA_coef = trial.suggest_float("dA_coef", 0.01, 0.3)
 
     def run_for_seed(seed):
+        def _print(*args):
+            print(f"Trial {trial.number}, seed {seed}: ", *args)
+
         np.random.seed(seed)
         simulation = Simulation(
             NET_DICT, NEURON_DICT, log,
@@ -71,12 +74,12 @@ def objective(trial):
 
         num_spikes = simulation.count_out_spikes()
         if num_spikes > initial_iters * 1.25 or num_spikes < initial_iters / 2:
-            print(f'Killed at initial num spikes: {num_spikes}')
+            _print(f'Killed at initial num spikes: {num_spikes}')
             return 3  # optuna needs to minimize the objective
 
         exp_reward = simulation.expected_reward / simulation.epsilon_dopa
         if exp_reward > success_threshold:
-            print(f'Well-trained at initial stage expected reward: {exp_reward}')
+            _print(f'Well-trained at initial stage. Expected reward: {exp_reward}')
             return 0.5
 
         for sample_i in range(initial_iters, total_iters):
@@ -85,16 +88,15 @@ def objective(trial):
             simulation.update_expected_reward()
 
             exp_reward = simulation.expected_reward / simulation.epsilon_dopa
-            print(f'Expected reward at iteration {sample_i}: {exp_reward}')
             if exp_reward > success_threshold:
-                print(f'Well-trained at iteration {sample_i}')
+                _print(f'Well-trained at iteration {sample_i}')
                 return sample_i / total_iters
 
             if exp_reward < kill_threshold or simulation.count_out_spikes() < sample_i / 2:
-                print(f'Killed at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {simulation.count_out_spikes()}')
+                _print(f'Killed at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {simulation.count_out_spikes()}')
                 return 3
 
-        print(f'Final expected reward: {exp_reward}')
+        _print(f'Final expected reward: {exp_reward}')
         return 2 - exp_reward  # larger than any well-trained value
 
     results = [run_for_seed(seed) for seed in seeds]
@@ -110,7 +112,7 @@ def run_optimization(process_id):
         study_name=STUDY_NAME,
         storage=STORAGE
     )
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=os.getenv("OPTUNA_N_TRIALS", 10))  # n_trials is for each process
 
 if __name__ == '__main__':
     distributed = os.getenv("OPTUNA_DISTRIBUTED", False)
@@ -142,7 +144,7 @@ if __name__ == '__main__':
         print("Best params:", final_study.best_params)
     else:
         study = optuna.create_study()
-        study.optimize(objective, n_trials=10)  # n_trials is for each process
+        study.optimize(objective, n_trials=10)
         print("Results:")
         print(study.best_value)
         print(study.best_params)
