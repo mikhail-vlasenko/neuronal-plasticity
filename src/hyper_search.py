@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+from multiprocessing import Process
 
 import optuna
 
@@ -97,17 +98,48 @@ def objective(trial):
     return 2 - exp_reward  # larger than any well-trained value
 
 
+STUDY_NAME = "nddl"
+STORAGE = "sqlite:///optuna_sqlite.db"
+
+def run_optimization(process_id):
+    print(f"Process {process_id} started")
+    study = optuna.load_study(
+        study_name=STUDY_NAME,
+        storage=STORAGE
+    )
+    study.optimize(objective, n_trials=10)
+
 if __name__ == '__main__':
     distributed = os.getenv("OPTUNA_DISTRIBUTED", False)
-    storage = None
     if distributed:
-        study = optuna.load_study(
-            study_name="nddl", storage="sqlite:///optuna_db1.db"
+        print("Distributed mode")
+        # Create the study first
+        study = optuna.create_study(
+            study_name=STUDY_NAME,
+            storage=STORAGE,
         )
-        print("Distributed mode initialized")
+
+        n_processes = os.getenv("OPTUNA_PROCESSES", 16)
+
+        processes = []
+        for i in range(n_processes):
+            p = Process(target=run_optimization, args=(i,))
+            p.start()
+            processes.append(p)
+
+        for p in processes:
+            p.join()
+
+        # Print results
+        final_study = optuna.load_study(
+            study_name=STUDY_NAME,
+            storage=STORAGE
+        )
+        print("Best value:", final_study.best_value)
+        print("Best params:", final_study.best_params)
     else:
         study = optuna.create_study()
-    study.optimize(objective, n_trials=10)  # n_trials is for each process
-    print("Results:")
-    print(study.best_value)
-    print(study.best_params)
+        study.optimize(objective, n_trials=10)  # n_trials is for each process
+        print("Results:")
+        print(study.best_value)
+        print(study.best_params)
