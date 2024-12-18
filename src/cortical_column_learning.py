@@ -16,20 +16,41 @@ defaultclock.dt = 0.1 * ms  # Time resolution of the simulation
 
 
 class Simulation:
-    def __init__(self, net_dict, neuron_dict, log):
+    def __init__(
+            self, net_dict, neuron_dict, log,
+            sample_duration=100 * ms,
+            epochs=2,
+            num_exposures=2, multiply_input=1, wait_durations=0,
+            data_path='../data/mini_sample.csv',
+            in_connection_avg=32, out_connection_avg=32,
+            weight_coef=0.5, weight_std_coef=0.5,
+            in_out_max_strength=0.35,
+            post_prediction_inhib_value=0.2,
+            epsilon_dopa=1e-2,
+            hom_add_coef=20, hom_subtract_coef=2, gmax_coef=0.5, dA_coef=0.1,  # ampa params
+    ):
+        reset_ampa_counter()
         self.net_dict = net_dict
         self.neuron_dict = neuron_dict
-        self.sample_duration = 100 * ms
-        self.epochs = 2
-        self.num_exposures = 2
-        self.multiply_input = 1
-        self.wait_durations = 0
-        self.data_path = '../data/sample.csv'
-        self.in_connection_avg = 32
-        self.out_connection_avg = 32
-        self.weight_coef = 0.5
-        self.weight_std_coef = 0.5
-        self.in_out_max_strength = 0.35
+        self.sample_duration = sample_duration
+        self.epochs = epochs
+        self.num_exposures = num_exposures
+        self.multiply_input = multiply_input
+        self.wait_durations = wait_durations
+        self.data_path = data_path
+        self.in_connection_avg = in_connection_avg
+        self.out_connection_avg = out_connection_avg
+        self.weight_coef = weight_coef
+        self.weight_std_coef = weight_std_coef
+        self.in_out_max_strength = in_out_max_strength
+        self.post_prediction_inhib_value = post_prediction_inhib_value
+        self.epsilon_dopa = epsilon_dopa
+        self.ampa_params = {
+            'hom_add_coef': hom_add_coef,
+            'hom_subtract_coef': hom_subtract_coef,
+            'gmax_coef': gmax_coef,
+            'dA_coef': dA_coef
+        }
 
         self.log = log
         self.net = None
@@ -83,7 +104,7 @@ class Simulation:
         )
         self.__post_init_population(self.output_neurons, 0)
         self.output_monitor = SpikeMonitor(self.output_neurons)
-        self.output_state_monitor = StateMonitor(self.output_neurons, ['v', 'adaptation', 's_gaba_prediction', 's_ampa_tot'], record=[0, 1])
+        self.output_state_monitor = StateMonitor(self.output_neurons, ['v', 's_gaba_prediction', 's_ampa_tot'], record=[0, 1])
         self.net_params.append(self.output_neurons)
         self.net_params.append(self.output_monitor)
         self.net_params.append(self.output_state_monitor)
@@ -103,7 +124,7 @@ class Simulation:
 
                 if m == 0:
                     # ampa synapses
-                    synapse_params = get_ampa_params(weight * 2)
+                    synapse_params = get_ampa_params(weight * 2, **self.ampa_params)
                 else:
                     # gaba synapses
                     synapse_params = {
@@ -135,7 +156,7 @@ class Simulation:
                 self.synapses.append(synapse)
         if hasattr(self, 'output_neurons'):
             synapse = Synapses(
-                self.pops[0], self.output_neurons, name='Excitatory_Output', **get_ampa_params(self.in_out_max_strength)
+                self.pops[0], self.output_neurons, name='Excitatory_Output', **get_ampa_params(self.in_out_max_strength, **self.ampa_params)
             )
             synapse.connect(p=self.out_connection_avg / self.net_dict['num_neurons'][0])
             synapse.w = f"rand() * {self.in_out_max_strength} * {self.weight_coef}"
@@ -171,7 +192,7 @@ class Simulation:
         self.input_monitor = SpikeMonitor(self.input_neurons)
         # connect to excitatory neurons
         synapse = Synapses(
-            self.input_neurons, self.pops[0], name='Input_Excitatory', **get_ampa_params(self.in_out_max_strength)
+            self.input_neurons, self.pops[0], name='Input_Excitatory', **get_ampa_params(self.in_out_max_strength, **self.ampa_params)
         )
         synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input)
         synapse.w = f"rand() * {self.in_out_max_strength} * {self.weight_coef}"
@@ -181,7 +202,6 @@ class Simulation:
         self.net_params.append(self.input_monitor)
 
     def __connect_post_prediction_inhibition(self):
-        self.post_prediction_inhib_value = 0.2
         self.post_prediction_inhibitors = []
         targets = self.pops + [self.output_neurons]
         for _i in range(len(targets)):
@@ -214,23 +234,37 @@ class Simulation:
             self.reward_synapses[-1].connect()
         self.net_params.append(self.reward_synapses)
 
-    def run(self):
+    def create_network(self):
         self.net = Network(*self.net_params)
+
+    def count_out_spikes(self):
+        return self.output_monitor.num_spikes
+
+    def run(self):
+        self.create_network()
+        kill_threshold = -0.8
         for sample_i in tqdm(range(math.floor(self.duration / self.sample_duration))):
             # assign negative reward to the second output neuron. its synapses subtract the reward
-            reward_value = epsilon_dopa if self.targets[sample_i] == 0 else -epsilon_dopa
+            reward_value = self.epsilon_dopa if self.targets[sample_i] == 0 else -self.epsilon_dopa
             self.net.run(self.sample_duration)
             self.output_neurons.expected_reward[0], self.output_neurons.expected_reward[1] = (
                 expected_reward_merge(self.output_neurons.expected_reward))
-            if self.output_neurons.expected_reward[0] > epsilon_dopa * 0.95:
+            print(self.output_neurons.expected_reward)
+            exp_reward = self.output_neurons.expected_reward[0] / self.epsilon_dopa
+            if exp_reward > 0.95:
                 print(f'Well-trained at iteration {sample_i}')
+
+            if exp_reward < kill_threshold or self.count_out_spikes() < sample_i / 2:
+                print(f'Killed at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {self.count_out_spikes()}')
 
 
 def main(seed=0):
+    params = {'in_connection_avg': 53.71756093750615, 'out_connection_avg': 62.44292571783447, 'weight_coef': 0.18821712718922542, 'in_out_max_strength': 0.5301742137203809, 'post_prediction_inhib_value': 0.26487145120938077, 'epsilon_dopa': 0.001246196330672366, 'hom_add_coef': 26.80872298042561, 'hom_subtract_coef': 4.335327144480162, 'gmax_coef': 0.3837062036167356, 'dA_coef': 0.06682441175897401}
+    params['epochs'] = 8
     np.random.seed(seed)
     log = setup_loggers('')
 
-    simulation = Simulation(NET_DICT, NEURON_DICT, log)
+    simulation = Simulation(NET_DICT, NEURON_DICT, log, **params)
     simulation.run()
 
     PLOTTING_PARAMS.simulation_duration = simulation.duration

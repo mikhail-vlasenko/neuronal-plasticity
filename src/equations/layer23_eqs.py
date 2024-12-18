@@ -89,7 +89,6 @@ tau_homeostasis = 1000*ms
 tauc = 250*ms
 taud = 10*ms
 taus = 1*ms  # this is lr, but prob better to increase eligibility trace for faster learning
-epsilon_dopa = 1e-2
 
 expected_reward_change_rate = 0.25
 
@@ -110,12 +109,12 @@ def get_ampa_model():
     _ampa_counter += 1
     return eq
 
-def get_ampa_pre_post(max_strength):
+def get_ampa_pre_post(max_strength, hom_add_coef, hom_subtract_coef, gmax_coef, dA_coef):
     homeostasis_max = max_strength
-    homeostasis_add = homeostasis_max / 20
-    homeostasis_subtract = homeostasis_add * 2
-    gmax = 0.5 * max_strength
-    dApre = 0.1 * gmax
+    homeostasis_add = homeostasis_max / hom_add_coef
+    homeostasis_subtract = homeostasis_add * hom_subtract_coef
+    gmax = gmax_coef * max_strength
+    dApre = dA_coef * gmax
     dApost = -dApre * taupre / taupost * 1.05
 
     ampa_on_pre = f'''
@@ -135,9 +134,9 @@ def get_ampa_pre_post(max_strength):
     '''
     return ampa_on_pre, ampa_on_post
 
-def get_ampa_params(max_strength):
+def get_ampa_params(max_strength, **kwargs):
     model = get_ampa_model()
-    ampa_on_pre, ampa_on_post = get_ampa_pre_post(max_strength)
+    ampa_on_pre, ampa_on_post = get_ampa_pre_post(max_strength, **kwargs)
     return {
         'model': model,
         'on_pre': ampa_on_pre,
@@ -145,6 +144,10 @@ def get_ampa_params(max_strength):
         'method': 'euler',
         'delay': NET_DICT['delay']
     }
+
+def reset_ampa_counter():
+    global _ampa_counter
+    _ampa_counter = 0
 
 
 _inhib_synapse_shared = f'''
@@ -181,14 +184,10 @@ gaba_on_post = '''
     w += exp(-(w - baseline_inhib_w)/amplitude)*learning_rate
 '''
 
-tauadapt = 50*ms
-v_adaptation = 10*mV
-
 output_neuron_model = Equations(f'''
         dv/dt = (-g_L*(v - V_L) - I_syn)/C_m: volt (unless refractory)
         I_syn = I_ampa_rec + I_gaba : amp
         
-        dadaptation/dt = -adaptation / tauadapt : volt
         expected_reward : 1
 
         V_L : volt
@@ -212,7 +211,6 @@ OUTPUT_NEURON_PARAMS = {
     'threshold': 'v > v_th',
     'reset': '''
         expected_reward += expected_reward_change_rate * (reward_value - expected_reward)
-        adaptation += v_adaptation
         v = v_reset
     ''',
     'refractory': '5*ms',
