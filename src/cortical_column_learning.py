@@ -21,9 +21,9 @@ class Simulation:
             sample_duration=100 * ms,
             epochs=2,
             num_exposures=2, multiply_input=1, wait_durations=0,
-            data_path='../data/mini_sample.csv',
+            data_path='../data/sample.csv',
             in_connection_avg=32, out_connection_avg=32,
-            weight_coef=0.5, weight_std_coef=0.5,
+            weight_coef=0.5, weight_std_coef=0.25,
             in_out_max_strength=0.35,
             post_prediction_inhib_value=0.2,
             epsilon_dopa=1e-2,
@@ -54,6 +54,7 @@ class Simulation:
 
         self.log = log
         self.net = None
+        self.expected_reward = 0
         self.num_populations = 4
         self.synapses = []
         self.dopamine_modulated_synapse_idx = []  # holds indices of synapses that are trained with dopamine
@@ -240,34 +241,43 @@ class Simulation:
     def count_out_spikes(self):
         return self.output_monitor.num_spikes
 
+    def set_reward(self, sample_i):
+        # assign negative reward to the second output neuron. its synapses subtract the reward
+        _reward_value = self.epsilon_dopa if self.targets[sample_i] == 0 else -self.epsilon_dopa
+        self.output_neurons.reward_value[0] = _reward_value
+        self.output_neurons.reward_value[1] = -_reward_value
+        self.output_neurons.expected_reward = self.expected_reward
+        self.output_neurons.obtained_reward = 0
+
+    def update_expected_reward(self):
+        self.expected_reward = expected_reward_merge(self.output_neurons.obtained_reward, self.expected_reward)
+
     def run(self):
         self.create_network()
-        global_expected_reward = 0
+        self.expected_reward = 0
         kill_threshold = -0.8
-        for sample_i in tqdm(range(math.floor(self.duration / self.sample_duration))):
-            # assign negative reward to the second output neuron. its synapses subtract the reward
-            _reward_value = self.epsilon_dopa if self.targets[sample_i] == 0 else -self.epsilon_dopa
-            self.output_neurons.reward_value[0] = _reward_value
-            self.output_neurons.reward_value[1] = -_reward_value
-            self.output_neurons.expected_reward = global_expected_reward
-            self.output_neurons.obtained_reward = 0
-            print(sample_i, _reward_value - global_expected_reward, -_reward_value - global_expected_reward)
-
+        pbar = tqdm(range(math.floor(self.duration / self.sample_duration)))
+        for sample_i in pbar:
+            self.set_reward(sample_i)
             self.net.run(self.sample_duration)
-            global_expected_reward = expected_reward_merge(self.output_neurons.obtained_reward, global_expected_reward)
 
-            exp_reward = global_expected_reward / self.epsilon_dopa
-            print(exp_reward)
-            if exp_reward > 0.95:
+            self.update_expected_reward()
+            exp_reward = self.expected_reward / self.epsilon_dopa
+            pbar.set_description(f'Expected reward: {exp_reward:.3f}')
+
+            if exp_reward > 0.8:
                 print(f'Well-trained at iteration {sample_i}')
 
-            if exp_reward < kill_threshold or self.count_out_spikes() < sample_i / 2:
-                print(f'Killed at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {self.count_out_spikes()}')
+            if sample_i > 16 and (exp_reward < kill_threshold or self.count_out_spikes() < sample_i / 2):
+                print(f'Bad at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {self.count_out_spikes()}')
 
 
 def main(seed=0):
-    params = {'in_connection_avg': 53.71756093750615, 'out_connection_avg': 62.44292571783447, 'weight_coef': 0.18821712718922542, 'in_out_max_strength': 0.5301742137203809, 'post_prediction_inhib_value': 0.26487145120938077, 'epsilon_dopa': 0.001246196330672366, 'hom_add_coef': 26.80872298042561, 'hom_subtract_coef': 4.335327144480162, 'gmax_coef': 0.3837062036167356, 'dA_coef': 0.06682441175897401}
-    params['epochs'] = 8
+    # params = {'in_connection_avg': 53.71756093750615, 'out_connection_avg': 62.44292571783447, 'weight_coef': 0.18821712718922542, 'in_out_max_strength': 0.5301742137203809, 'post_prediction_inhib_value': 0.26487145120938077, 'epsilon_dopa': 0.001246196330672366, 'hom_add_coef': 26.80872298042561, 'hom_subtract_coef': 4.335327144480162, 'gmax_coef': 0.3837062036167356, 'dA_coef': 0.06682441175897401}
+    # params = {'in_connection_avg': 34.572228791930954, 'out_connection_avg': 25.03500610742471, 'weight_coef': 0.7862889750552065, 'in_out_max_strength': 0.30132928048344865, 'post_prediction_inhib_value': 0.20977924944679194, 'epsilon_dopa': 0.005367558528667768, 'hom_add_coef': 19.662464119313952, 'hom_subtract_coef': 2.8909728000014123, 'gmax_coef': 0.6984370340147569, 'dA_coef': 0.15674494319660678}
+    params = {'in_connection_avg': 33.38692778741311, 'out_connection_avg': 54.594570848235975, 'weight_coef': 0.47962878331113645, 'in_out_max_strength': 0.47320195809199384, 'post_prediction_inhib_value': 0.21538093357581117, 'epsilon_dopa': 0.0015630246600834763, 'hom_add_coef': 27.395706014981126, 'hom_subtract_coef': 4.402953839380141, 'gmax_coef': 0.5934098846483593, 'dA_coef': 0.28873172251878015}
+    params['epochs'] = 10
+    params['data_path'] = '../data/mini_sample.csv'
     np.random.seed(seed)
     log = setup_loggers('')
 
@@ -275,7 +285,7 @@ def main(seed=0):
     simulation.run()
 
     PLOTTING_PARAMS.simulation_duration = simulation.duration
-    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 300)
+    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 2000)
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()

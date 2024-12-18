@@ -22,8 +22,8 @@ def objective(trial):
     success_threshold = 0.8
     kill_threshold = -0.8
     initial_iters = 16
-    epochs = 64
-    data_path = '../data/mini_sample.csv'
+    epochs = 32
+    data_path = '../data/sample.csv'
 
     # Network connectivity parameters
     in_connection_avg = trial.suggest_float("in_connection_avg", 16, 64)
@@ -63,23 +63,28 @@ def objective(trial):
     simulation.create_network()
     total_iters = math.floor(simulation.duration / simulation.sample_duration)
     for sample_i in range(initial_iters):
-        reward_value = simulation.epsilon_dopa if simulation.targets[sample_i] == 0 else -simulation.epsilon_dopa
+        simulation.set_reward(sample_i)
         simulation.net.run(simulation.sample_duration)
-        simulation.output_neurons.expected_reward[0], simulation.output_neurons.expected_reward[1] = (
-            expected_reward_merge(simulation.output_neurons.expected_reward))
+        simulation.update_expected_reward()
 
     num_spikes = simulation.count_out_spikes()
     if num_spikes > initial_iters * 1.25 or num_spikes < initial_iters / 2:
         print(f'Killed at initial num spikes: {num_spikes}')
         return 3  # optuna needs to minimize the objective
 
-    exp_reward = 0
+
+    exp_reward = simulation.expected_reward / simulation.epsilon_dopa
+    if exp_reward > success_threshold:
+        print(f'Trained too early. Expected reward: {exp_reward}')
+        return 1.5
+
     for sample_i in range(initial_iters, total_iters):
-        reward_value = simulation.epsilon_dopa if simulation.targets[sample_i] == 0 else -simulation.epsilon_dopa
+        simulation.set_reward(sample_i)
         simulation.net.run(simulation.sample_duration)
-        simulation.output_neurons.expected_reward[0], simulation.output_neurons.expected_reward[1] = (
-            expected_reward_merge(simulation.output_neurons.expected_reward))
-        exp_reward = simulation.output_neurons.expected_reward[0] / simulation.epsilon_dopa
+        simulation.update_expected_reward()
+
+        exp_reward = simulation.expected_reward / simulation.epsilon_dopa
+        print(f'Expected reward at iteration {sample_i}: {exp_reward}')
         if exp_reward > success_threshold:
             print(f'Well-trained at iteration {sample_i}')
             return sample_i / total_iters
