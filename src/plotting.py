@@ -27,7 +27,7 @@ PLOTTING_PARAMS.update()
 
 def get_plots_iterator():
     sns.set_style("whitegrid")
-    plt.rcParams['figure.figsize'] = [15, 12]
+    plt.rcParams['figure.figsize'] = [7, 12]
 
     fig = plt.figure(constrained_layout=True, dpi=100)
     if PLOTTING_PARAMS.minimal_reporting:

@@ -12,7 +12,6 @@ module purge
 module load 2022
 module load Anaconda3/2022.05
 
-conda create -n optuna_env python=3.10.12
 source activate optuna_env
 
 export PYTHONPATH="${PYTHONPATH}:/home/mvlasenko/neuronal-plasticity"

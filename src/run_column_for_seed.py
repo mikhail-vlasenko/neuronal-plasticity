@@ -73,11 +73,8 @@ def run_for_seed(
 
 
 def main(seed=0):
-    # params = {'in_connection_avg': 63.61493174793468, 'out_connection_avg': 43.5554992226015, 'weight_coef': 0.2754978971096503, 'in_out_max_strength': 0.3326309275202886, 'post_prediction_inhib_value': 0.20316439497369881, 'epsilon_dopa': 0.03861273348008514, 'hom_add_coef': 14.59113587079569, 'hom_subtract_coef': 1.7771771154755764, 'gmax_coef': 0.535232155930282, 'dA_coef': 0.08359228568155307}
-    # iter 113
-    # params = {'in_connection_avg': 36.75938701607436, 'out_connection_avg': 38.31586841874557, 'weight_coef': 0.3478002611515175, 'in_out_max_strength': 0.3579144843925931, 'post_prediction_inhib_value': 0.0830196600114798, 'epsilon_dopa': 0.008015934444846762, 'hom_add_coef': 11.252674808682224, 'hom_subtract_coef': 4.856393272889642, 'gmax_coef': 0.2605735865010971, 'dA_coef': 0.02362831541590541}
-    params = {'in_connection_avg': 29.377815522884113, 'out_connection_avg': 35.53795706986652, 'weight_coef': 0.37619051980149176, 'in_out_max_strength': 0.5143908103162069, 'post_prediction_inhib_value': 0.2674335597095533, 'epsilon_dopa': 0.001563584110860179, 'hom_add_coef': 18.771656999020415, 'hom_subtract_coef': 3.1377985224829463, 'gmax_coef': 0.17484030554504476, 'dA_coef': 0.12410622172759984}
-    params['epochs'] = 4
+    params = {'in_connection_avg': 51.338810560257805, 'out_connection_avg': 29.865152512012735, 'weight_coef': 0.1940955736697889, 'in_out_max_strength': 0.40852078693779903, 'post_prediction_inhib_value': 0.26911541583357784, 'epsilon_dopa': 0.0646988016329517, 'hom_add_coef': 14.560935611024547, 'hom_subtract_coef': 4.293059584704207, 'gmax_coef': 0.27555080107464347, 'dA_coef': 0.23152478813141367}
+    params['epochs'] = 64
     params['data_path'] = '../data/sample.csv'
     log = setup_loggers('')
 
@@ -98,12 +95,14 @@ def main(seed=0):
     )
 
     simulation: Simulation = run_for_seed(
-        1, params, log,
+        seed, params, log,
+        initial_iters=8,
+        success_threshold=0.95,
         return_simulation=True
     )
 
     PLOTTING_PARAMS.simulation_duration = simulation.end_time
-    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 2000)
+    PLOTTING_PARAMS.plot_from = max(0, PLOTTING_PARAMS.simulation_duration / ms - 1000)
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()

@@ -39,7 +39,7 @@ delta_ts = np.linspace(-50 * ms, 50 * ms, 1000)
 weight_changes = [compute_weight_change(dt) for dt in delta_ts]
 
 # Create the plot
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6), dpi=200)
 sns.set_style("whitegrid")
 
 # Plot the STDP curve
@@ -65,4 +65,4 @@ plt.ylim(-y_max * 1.1, y_max * 1.1)
 
 # Show the plot
 plt.tight_layout()
-plt.show()
+plt.savefig('stdp.png')
