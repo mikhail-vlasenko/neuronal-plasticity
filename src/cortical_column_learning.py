@@ -1,15 +1,12 @@
 from brian2 import NeuronGroup, Synapses, PoissonGroup, SpikeMonitor, Network, ms, defaultclock, StateMonitor
-from matplotlib import pyplot as plt
 from tqdm import tqdm
 import math
 
-from Original_model.utils.utils import setup_loggers
-from src.connectivity_graph import visualize_network_connectivity
 from src.equations.layer23_eqs import *
 from src.equations.stdp_eqs import expected_reward_merge
 from src.input_from_csv import csv_input_neurons
-from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS, plot_heatmaps, plot_dopamine, \
-    plot_output_potentials
+from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS
+
 
 # todo: remove
 defaultclock.dt = 0.1 * ms  # Time resolution of the simulation
@@ -55,6 +52,7 @@ class Simulation:
         self.log = log
         self.net = None
         self.expected_reward = 0
+        self.end_time = 0
         self.num_populations = 4
         self.synapses = []
         self.dopamine_modulated_synapse_idx = []  # holds indices of synapses that are trained with dopamine
@@ -195,7 +193,10 @@ class Simulation:
         synapse = Synapses(
             self.input_neurons, self.pops[0], name='Input_Excitatory', **get_ampa_params(self.in_out_max_strength, **self.ampa_params)
         )
-        synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0], n=self.multiply_input)
+        # self.states.append(np.random.get_state()[1][:10])
+        # this bs function calls np random on the first call in a process but not on the subsequent ones
+        synapse.connect(p=self.in_connection_avg / self.net_dict['num_neurons'][0])
+        # self.states.append(np.random.get_state()[1][:10])
         synapse.w = f"rand() * {self.in_out_max_strength} * {self.weight_coef}"
         self.dopamine_modulated_synapse_idx.append(len(self.synapses))
         self.synapses.append(synapse)
@@ -264,52 +265,12 @@ class Simulation:
             self.update_expected_reward()
             exp_reward = self.expected_reward / self.epsilon_dopa
             pbar.set_description(f'Expected reward: {exp_reward:.3f}')
+            self.end_time = (sample_i + 1) * self.sample_duration
 
-            if exp_reward > 0.8:
+            if exp_reward > 0.925:
                 print(f'Well-trained at iteration {sample_i}')
+                break
 
             if sample_i > 16 and (exp_reward < kill_threshold or self.count_out_spikes() < sample_i / 2):
                 print(f'Bad at iteration {sample_i}. Expected reward: {exp_reward}. Num spikes: {self.count_out_spikes()}')
-
-
-def main(seed=0):
-    # params = {'in_connection_avg': 63.61493174793468, 'out_connection_avg': 43.5554992226015, 'weight_coef': 0.2754978971096503, 'in_out_max_strength': 0.3326309275202886, 'post_prediction_inhib_value': 0.20316439497369881, 'epsilon_dopa': 0.03861273348008514, 'hom_add_coef': 14.59113587079569, 'hom_subtract_coef': 1.7771771154755764, 'gmax_coef': 0.535232155930282, 'dA_coef': 0.08359228568155307}
-    # iter 113
-    params = {'in_connection_avg': 36.75938701607436, 'out_connection_avg': 38.31586841874557, 'weight_coef': 0.3478002611515175, 'in_out_max_strength': 0.3579144843925931, 'post_prediction_inhib_value': 0.0830196600114798, 'epsilon_dopa': 0.008015934444846762, 'hom_add_coef': 11.252674808682224, 'hom_subtract_coef': 4.856393272889642, 'gmax_coef': 0.2605735865010971, 'dA_coef': 0.02362831541590541}
-    params['epochs'] = 16
-    params['data_path'] = '../data/sample.csv'
-    np.random.seed(seed)
-    log = setup_loggers('')
-
-    simulation = Simulation(NET_DICT, NEURON_DICT, log, **params)
-    simulation.run()
-
-    PLOTTING_PARAMS.simulation_duration = simulation.duration
-    PLOTTING_PARAMS.plot_from = max(0, simulation.duration / ms - 2000)
-    PLOTTING_PARAMS.update()
-
-    fig, gs = get_plots_iterator()
-
-    plot_dopamine(fig.add_subplot(gs.__next__()), simulation.dopamine_monitor)
-    if not PLOTTING_PARAMS.minimal_reporting:
-        plot_output_potentials(fig.add_subplot(gs.__next__()),
-                               simulation.output_state_monitor, simulation.neuron_dict['V_th'][0])
-
-    if PLOTTING_PARAMS.plot_heatmaps and not PLOTTING_PARAMS.minimal_reporting:
-        ax_input = fig.add_subplot(gs.__next__())
-        ax_output = fig.add_subplot(gs.__next__())
-        plot_heatmaps(ax_input, ax_output, None, simulation.weight_monitors[0])
-
-    spike_raster(
-        fig.add_subplot(gs.__next__()),
-        simulation.input_monitor if hasattr(simulation, 'input_monitor') else None,
-        simulation.spike_monitors[0], simulation.spike_monitors[1:],
-        simulation.output_monitor if hasattr(simulation, 'output_monitor') else None,
-    )
-
-    plt.savefig('cortical_column_learning.png')
-    plt.show()
-
-
-if __name__ == '__main__':
-    main(1)
+                break
