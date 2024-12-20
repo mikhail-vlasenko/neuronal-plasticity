@@ -102,7 +102,7 @@ def main(seed=0):
     )
 
     PLOTTING_PARAMS.simulation_duration = simulation.end_time
-    PLOTTING_PARAMS.plot_from = max(0, PLOTTING_PARAMS.simulation_duration / ms - 1000)
+    PLOTTING_PARAMS.plot_from = max(0, PLOTTING_PARAMS.simulation_duration / ms - 800)
     PLOTTING_PARAMS.update()
 
     fig, gs = get_plots_iterator()
