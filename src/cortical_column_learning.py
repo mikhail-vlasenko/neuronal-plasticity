@@ -8,7 +8,6 @@ from src.input_from_csv import csv_input_neurons
 from src.plotting import spike_raster, get_plots_iterator, PLOTTING_PARAMS
 
 
-# todo: remove
 defaultclock.dt = 0.1 * ms  # Time resolution of the simulation
 
 

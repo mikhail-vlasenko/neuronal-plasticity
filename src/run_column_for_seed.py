@@ -3,7 +3,7 @@ import math
 
 from matplotlib import pyplot as plt
 
-from Original_model.utils.utils import setup_loggers
+from src.utils import setup_loggers
 from src.cortical_column_learning import Simulation
 from src.equations.layer23_eqs import *
 from src.plotting import PLOTTING_PARAMS, get_plots_iterator, plot_dopamine, plot_output_potentials, plot_heatmaps, \
