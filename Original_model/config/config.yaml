@@ -1,5 +1,0 @@
-t_sim: 500 # Simulation time in ms
-
-synaptic_density: 1
-
-experiment_type: None
