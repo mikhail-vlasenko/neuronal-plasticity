@@ -1,7 +1,7 @@
 import numpy as np
 from brian2 import Equations, mV, ms
 
-from src.network_parameters import net_dict as ORIGINAL_NET_DICT, neuron_dict as ORIGINAL_NEURON_DICT
+from src.equations.network_parameters import net_dict as ORIGINAL_NET_DICT, neuron_dict as ORIGINAL_NEURON_DICT
 
 POPULATIONS = ['L23E', 'L23PV', 'L23SST', 'L23VIP']  # indices 1, 2, 3, 4 from the original model
 

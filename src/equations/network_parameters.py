@@ -1,11 +1,5 @@
-# File with the Neuronal and network parameters
-
 from brian2 import *
-import matplotlib.pyplot as plt
 import numpy as np
-import hydra
-from omegaconf import DictConfig
-from omegaconf import OmegaConf
 
 N_tot = 5000 # Total number of neurons
 N_1 = 0.0192574218*N_tot # Number of neurons in layer 1
